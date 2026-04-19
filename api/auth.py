@@ -32,7 +32,7 @@ api_key_header  = APIKeyHeader(name="X-API-Key", auto_error=False)
 # ── Password ─────────────────────────────────────────────────────
 
 def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
+    return pwd_context.hash(password[:72])
 
 
 def verify_password(plain: str, hashed: str) -> bool:
