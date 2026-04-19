@@ -44,6 +44,10 @@ async def execute_run(run_id: str, returns: np.ndarray, config: dict, db: AsyncS
 
     try:
         # ── Import engine (lazy to keep startup fast) ──────────
+        import sys, os
+        sys.path.insert(0, "/app")
+        sys.path.insert(0, "/app/engine")
+        sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         from engine.core import (
             InputProcessor, StructuralConstraintLayer,
             ConstrainedMonteCarloGenerator, StressMetricsEngine,
