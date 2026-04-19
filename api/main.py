@@ -237,9 +237,8 @@ async def run_custom(
         "strategy_name":   req.strategy_name,
     }
 
-    background_tasks.add_task(execute_run, run_id=run.id, returns=returns,
-                               config=config, db=db)
-
+    await execute_run(run_id=run.id, returns=returns, config=config, db=db)
+    await db.refresh(run)
     return RunStatusResponse(
         run_id=run.id, status=run.status, created_at=run.created_at,
     )
