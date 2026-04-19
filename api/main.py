@@ -255,7 +255,9 @@ async def get_run(
 ):
     """Poll for run status. When status='completed', result is included."""
     result = await db.execute(
-        select(Run).where(Run.id == run_id, Run.user_id == user.id)
+        select(Run)
+        .where(Run.id == run_id, Run.user_id == user.id)
+        .options(selectinload(Run.result))
     )
     run = result.scalar_one_or_none()
     if run is None:
