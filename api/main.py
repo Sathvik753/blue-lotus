@@ -32,6 +32,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
+from sqlalchemy.orm import selectinload
 
 from db.database import get_db, init_db
 from db.models import User, ApiKey, Run, Result, RunStatus
@@ -296,6 +297,7 @@ async def list_runs(
     runs_q = await db.execute(
         select(Run)
         .where(Run.user_id == user.id)
+        .options(selectinload(Run.result))
         .order_by(Run.created_at.desc())
         .offset(offset).limit(page_size)
     )
