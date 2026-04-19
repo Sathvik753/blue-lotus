@@ -120,10 +120,9 @@ async def execute_run(run_id: str, returns: np.ndarray, config: dict, db: AsyncS
 
     except Exception as e:
         run.status    = RunStatus.failed
-        run.error_msg = f"{type(e).__name__}: {str(e)}\n{traceback.format_exc()[-500:]}"
+        run.error_msg = f"{type(e).__name__}: {str(e)}\n{traceback.format_exc()}"
         run.completed_at = datetime.now(timezone.utc)
         await db.commit()
-        raise
 
 
 async def fetch_ticker_and_run(run_id: str, ticker: str, start_date: str,
