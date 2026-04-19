@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-sys.path.insert(0, "/app/engine")   # Docker path; adjust for local dev
+sys.path.insert(0, "/app")   # Docker path; adjust for local dev
 
 from db.models import Run, Result, RunStatus
 from engine.serializer import serialize_run_results
