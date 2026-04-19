@@ -880,7 +880,7 @@ def run_comparison(tickers, start="2010-01-01", n_paths=5_000):
 # RUN — edit ticker or switch to comparison mode below
 # ═══════════════════════════════════════════════════════════════
 
-if __name__ == "__main__" or True:
+if __name__ == "__main__":
 
     import subprocess, sys
     print("Installing yfinance...")
