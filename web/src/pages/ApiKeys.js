@@ -22,7 +22,7 @@ export default function ApiKeys() {
     if (res?.ok) {
       setNewKey(res.data.key);
       setName("");
-      loadKeys();
+      await loadKeys();
     }
     setLoading(false);
   }

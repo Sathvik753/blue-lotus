@@ -21,13 +21,18 @@ export default function Compare() {
 
   async function run() {
     setError(""); setLoading(true); setResults(null);
-    const res = await api.post("/compare", {
-      tickers, start_date: startDate, n_paths: nPaths, horizon: 252,
-    });
-    if (res?.ok) {
-      setResults(res.data.rows);
-    } else {
-      setError(res?.data?.detail || "Comparison failed.");
+    try {
+      const res = await api.post("/compare", {
+        tickers, start_date: startDate, n_paths: nPaths, horizon: 252,
+      });
+      if (res?.ok) {
+        setResults(res.data.rows);
+      } else {
+        const detail = res?.data?.detail;
+        setError(Array.isArray(detail) ? detail.map(e => e.msg).join("; ") : (detail || "Comparison failed."));
+      }
+    } catch {
+      setError("Network error. Please try again.");
     }
     setLoading(false);
   }
@@ -86,7 +91,7 @@ export default function Compare() {
           <div>
             <label>Paths per ticker: {nPaths.toLocaleString()}</label>
             <input
-              type="range" min={500} max={5000} step={500}
+              type="range" min={1000} max={5000} step={500}
               value={nPaths} onChange={e => setNPaths(+e.target.value)}
               style={{ padding: 0, background: "transparent", border: "none" }}
             />
