@@ -21,7 +21,7 @@ function parseCSV(text) {
     returns.push(val);
   }
 
-  if (returns.length < 10) throw new Error("Need at least 10 return observations.");
+  if (returns.length < 30) throw new Error("Need at least 30 return observations.");
   return returns;
 }
 
@@ -94,7 +94,11 @@ export default function NewRun() {
 
       const res = await api.post("/run/custom", body);
       if (!res?.ok) {
-        throw new Error(res?.data?.detail || "Failed to start run.");
+        const detail = res?.data?.detail;
+        const msg = Array.isArray(detail)
+          ? detail.map(e => e.msg).join("; ")
+          : (typeof detail === "string" ? detail : "Failed to start run.");
+        throw new Error(msg);
       }
 
       const runId = res.data.run_id;
@@ -211,7 +215,7 @@ export default function NewRun() {
             <div>
               <label>Simulation Paths</label>
               <input
-                type="number" min={100} max={10000}
+                type="number" min={1000} max={10000}
                 value={nPaths}
                 onChange={e => setNPaths(e.target.value)}
               />

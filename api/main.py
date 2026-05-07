@@ -197,7 +197,7 @@ async def run_ticker(
     background_tasks.add_task(
         fetch_ticker_and_run,
         run_id=run.id, ticker=req.ticker,
-        start_date=req.start_date, config=config, db=db,
+        start_date=req.start_date, config=config,
     )
 
     return RunStatusResponse(
@@ -216,6 +216,7 @@ async def run_custom(
 ):
     """
     Submit a stress-test run on a user-supplied return series.
+    Returns immediately with run_id. Poll GET /run/{run_id} for results.
     """
     run = Run(
         user_id=user.id,
@@ -237,8 +238,8 @@ async def run_custom(
         "strategy_name":   req.strategy_name,
     }
 
-    await execute_run(run_id=run.id, returns=returns, config=config, db=db)
-    await db.refresh(run)
+    background_tasks.add_task(execute_run, run_id=run.id, returns=returns, config=config)
+
     return RunStatusResponse(
         run_id=run.id, status=run.status, created_at=run.created_at,
     )
@@ -274,6 +275,7 @@ async def get_run(
         created_at=run.created_at,
         completed_at=run.completed_at,
         duration_sec=run.duration_sec,
+        error_msg=run.error_msg,
         result=payload,
     )
 
@@ -338,7 +340,6 @@ async def compare(
     sys.path.insert(0, "/app/engine")
     warnings.filterwarnings("ignore")
 
-    from api.jobs import fetch_ticker_and_run
     import yfinance as yf
     import datetime as dt
     from engine.core import (

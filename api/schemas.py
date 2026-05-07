@@ -125,6 +125,7 @@ class FullResultResponse(BaseModel):
     created_at: datetime
     completed_at: Optional[datetime]
     duration_sec: Optional[float]
+    error_msg: Optional[str] = None
     result: Optional[Dict[str, Any]]   # full serialized engine output
 
 
