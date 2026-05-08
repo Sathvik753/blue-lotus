@@ -1,7 +1,9 @@
 import React, { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../utils/api";
-import { Upload, FileText, X, Play } from "lucide-react";
+import { TrendingUp, AlignLeft, Upload, FileText, X, Play } from "lucide-react";
+
+// ── CSV parser ────────────────────────────────────────────────────
 
 function parseCSV(text) {
   const lines = text.trim().split(/\r?\n/);
@@ -25,33 +27,107 @@ function parseCSV(text) {
   return returns;
 }
 
+// ── Paste parser ──────────────────────────────────────────────────
+
+function parsePaste(text) {
+  const tokens = text.trim().split(/[\s,]+/).filter(Boolean);
+  if (tokens.length === 0) return null;
+  const returns = tokens.map((v, i) => {
+    const n = parseFloat(v);
+    if (isNaN(n)) throw new Error(`Value ${i + 1}: "${v}" is not a number.`);
+    return n;
+  });
+  if (returns.length < 30) throw new Error(`Need at least 30 observations — got ${returns.length}.`);
+  return returns;
+}
+
+// ── Shared sub-components ─────────────────────────────────────────
+
+function ErrorBox({ msg }) {
+  if (!msg) return null;
+  return (
+    <div style={{
+      background: "rgba(192,57,43,0.1)", border: "1px solid rgba(192,57,43,0.3)",
+      borderRadius: 8, padding: "10px 14px", color: "var(--rose)", fontSize: 13,
+    }}>
+      {msg}
+    </div>
+  );
+}
+
+function formatApiError(data) {
+  if (!data) return "Request failed.";
+  const d = data.detail;
+  if (Array.isArray(d)) return d.map(e => e.msg).join("; ");
+  if (typeof d === "string") return d;
+  return "Something went wrong.";
+}
+
+// ── Main component ────────────────────────────────────────────────
+
+const MODES = [
+  { id: "ticker", label: "Yahoo Finance", icon: TrendingUp },
+  { id: "paste",  label: "Paste Returns", icon: AlignLeft  },
+  { id: "csv",    label: "Upload CSV",    icon: Upload      },
+];
+
 export default function NewRun() {
   const navigate = useNavigate();
-  const fileRef = useRef();
+  const fileRef  = useRef();
 
-  const [fileName, setFileName] = useState("");
-  const [returns, setReturns] = useState(null);
+  const [mode, setMode] = useState("ticker");
+
+  // Ticker mode
+  const [ticker,    setTicker]    = useState("");
+  const [startDate, setStartDate] = useState("2010-01-01");
+
+  // Paste mode
+  const [pasteText,    setPasteText]    = useState("");
+  const [pasteReturns, setPasteReturns] = useState(null);
+  const [pasteError,   setPasteError]   = useState("");
+
+  // CSV mode
+  const [fileName,   setFileName]   = useState("");
+  const [csvReturns, setCsvReturns] = useState(null);
   const [parseError, setParseError] = useState("");
-  const [dragging, setDragging] = useState(false);
+  const [dragging,   setDragging]   = useState(false);
 
+  // Shared params
   const [strategyName, setStrategyName] = useState("");
-  const [nPaths, setNPaths] = useState("1000");
-  const [horizon, setHorizon] = useState("252");
+  const [nPaths,       setNPaths]       = useState("1000");
+  const [horizon,      setHorizon]      = useState("252");
 
-  const [status, setStatus] = useState("");
+  // Run state
   const [running, setRunning] = useState(false);
-  const [error, setError] = useState("");
+  const [status,  setStatus]  = useState("");
+  const [error,   setError]   = useState("");
+
+  // ── Paste handling ──────────────────────────────────────────────
+
+  function onPasteChange(text) {
+    setPasteText(text);
+    setPasteError("");
+    setPasteReturns(null);
+    if (!text.trim()) return;
+    try {
+      setPasteReturns(parsePaste(text));
+    } catch (err) {
+      setPasteError(err.message);
+    }
+  }
+
+  // ── CSV handling ────────────────────────────────────────────────
 
   function handleFile(file) {
     if (!file) return;
     setParseError("");
-    setReturns(null);
+    setCsvReturns(null);
     const reader = new FileReader();
     reader.onload = e => {
       try {
         const parsed = parseCSV(e.target.result);
         setFileName(file.name);
-        setReturns(parsed);
+        setCsvReturns(parsed);
       } catch (err) {
         setParseError(err.message);
         setFileName("");
@@ -73,33 +149,40 @@ export default function NewRun() {
 
   function clearFile() {
     setFileName("");
-    setReturns(null);
+    setCsvReturns(null);
     setParseError("");
   }
 
+  // ── Submit ──────────────────────────────────────────────────────
+
   async function submit(e) {
     e.preventDefault();
-    if (!returns) return;
     setError("");
     setStatus("Submitting…");
     setRunning(true);
 
     try {
-      const body = {
-        returns,
-        strategy_name: strategyName.trim() || "Custom",
-        n_paths: parseInt(nPaths, 10) || 1000,
-        horizon: parseInt(horizon, 10) || 252,
-      };
+      let res;
 
-      const res = await api.post("/run/custom", body);
-      if (!res?.ok) {
-        const detail = res?.data?.detail;
-        const msg = Array.isArray(detail)
-          ? detail.map(e => e.msg).join("; ")
-          : (typeof detail === "string" ? detail : "Failed to start run.");
-        throw new Error(msg);
+      if (mode === "ticker") {
+        res = await api.post("/run/ticker", {
+          ticker:        ticker.trim().toUpperCase(),
+          start_date:    startDate,
+          strategy_name: strategyName.trim() || undefined,
+          n_paths:       parseInt(nPaths, 10)  || 1000,
+          horizon:       parseInt(horizon, 10) || 252,
+        });
+      } else {
+        const returns = mode === "csv" ? csvReturns : pasteReturns;
+        res = await api.post("/run/custom", {
+          returns,
+          strategy_name: strategyName.trim() || "Custom",
+          n_paths:       parseInt(nPaths, 10)  || 1000,
+          horizon:       parseInt(horizon, 10) || 252,
+        });
       }
+
+      if (!res?.ok) throw new Error(formatApiError(res?.data));
 
       const runId = res.data.run_id;
       setStatus("Running simulation…");
@@ -122,92 +205,192 @@ export default function NewRun() {
     }
   }
 
-  const canSubmit = returns && !running;
+  const canSubmit = !running && (
+    (mode === "ticker" && ticker.trim() !== "") ||
+    (mode === "paste"  && pasteReturns !== null) ||
+    (mode === "csv"    && csvReturns   !== null)
+  );
+
+  // ── Render ──────────────────────────────────────────────────────
 
   return (
     <div className="fade-in">
       <div className="accent-line" />
       <h1 style={{ fontSize: 32, marginBottom: 8 }}>New Stress Test</h1>
       <p style={{ color: "var(--muted)", marginBottom: 32 }}>
-        Upload a CSV with a <code style={{ color: "var(--gold)" }}>return</code> column to run a Monte Carlo stress test.
+        Run a Monte Carlo stress test on any return series.
       </p>
 
       <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 24 }}>
 
-        {/* CSV Upload */}
-        <div className="card">
-          <div className="section-title" style={{ fontSize: 16, marginBottom: 16 }}>Upload Returns</div>
-
-          {!returns ? (
-            <div
-              onClick={() => fileRef.current.click()}
-              onDragOver={e => { e.preventDefault(); setDragging(true); }}
-              onDragLeave={() => setDragging(false)}
-              onDrop={onDrop}
+        {/* ── Mode selector ── */}
+        <div style={{
+          display: "flex", background: "var(--dark)", borderRadius: 10,
+          padding: 4, gap: 4,
+        }}>
+          {MODES.map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => { setMode(id); setError(""); }}
               style={{
-                border: `2px dashed ${dragging ? "var(--gold)" : "var(--border)"}`,
-                borderRadius: 10,
-                padding: "40px 24px",
-                textAlign: "center",
-                cursor: "pointer",
-                transition: "border-color 0.2s",
-                background: dragging ? "rgba(212,172,13,0.04)" : "transparent",
+                flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
+                gap: 8, padding: "10px 12px", borderRadius: 7, border: "none",
+                background: mode === id ? "var(--card)" : "transparent",
+                color: mode === id ? "var(--gold)" : "var(--muted)",
+                fontFamily: "Syne, sans-serif", fontWeight: 600,
+                fontSize: 12, letterSpacing: "0.05em", textTransform: "uppercase",
+                cursor: "pointer", transition: "all 0.15s",
+                boxShadow: mode === id ? "0 1px 3px rgba(0,0,0,0.3)" : "none",
               }}
             >
-              <Upload size={32} color="var(--muted)" style={{ marginBottom: 12 }} />
-              <div style={{ color: "var(--light)", fontWeight: 500, marginBottom: 6 }}>
-                Drop a CSV file here, or click to browse
+              <Icon size={13} />
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* ── Data source panel ── */}
+        <div className="card">
+
+          {/* Yahoo Finance */}
+          {mode === "ticker" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <div className="section-title" style={{ fontSize: 16, marginBottom: 0 }}>
+                Ticker Lookup
               </div>
-              <div style={{ color: "var(--muted)", fontSize: 12 }}>
-                Must include a <code style={{ color: "var(--gold)" }}>return</code> column · e.g. daily log-returns
-              </div>
-              <input ref={fileRef} type="file" accept=".csv,text/csv" onChange={onFileInput}
-                style={{ display: "none" }} />
-            </div>
-          ) : (
-            <div style={{
-              display: "flex", alignItems: "center", justifyContent: "space-between",
-              background: "var(--dark)", borderRadius: 8, padding: "12px 16px",
-              border: "1px solid var(--border)",
-            }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <FileText size={18} color="var(--teal)" />
+              <p style={{ color: "var(--muted)", fontSize: 13, marginTop: -8 }}>
+                Fetches daily close prices from Yahoo Finance and computes returns automatically.
+              </p>
+              <div className="grid-2" style={{ gap: 16 }}>
                 <div>
-                  <div style={{ fontWeight: 500, fontSize: 13 }}>{fileName}</div>
-                  <div style={{ color: "var(--muted)", fontSize: 11 }}>
-                    {returns.length.toLocaleString()} observations parsed ·{" "}
-                    min {Math.min(...returns).toFixed(4)} · max {Math.max(...returns).toFixed(4)}
-                  </div>
+                  <label>Ticker Symbol</label>
+                  <input
+                    placeholder="SPY, AAPL, BTC-USD…"
+                    value={ticker}
+                    onChange={e => setTicker(e.target.value.toUpperCase())}
+                    style={{ fontFamily: "DM Mono, monospace", letterSpacing: "0.05em" }}
+                  />
+                </div>
+                <div>
+                  <label>History Start Date</label>
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={e => setStartDate(e.target.value)}
+                  />
                 </div>
               </div>
-              <button type="button" onClick={clearFile} style={{
-                background: "none", border: "none", cursor: "pointer", color: "var(--muted)",
-                padding: 4,
-              }}>
-                <X size={16} />
-              </button>
             </div>
           )}
 
-          {parseError && (
-            <div style={{
-              marginTop: 12, background: "rgba(192,57,43,0.1)",
-              border: "1px solid rgba(192,57,43,0.3)", borderRadius: 8,
-              padding: "10px 14px", color: "var(--rose)", fontSize: 13,
-            }}>
-              {parseError}
+          {/* Paste Returns */}
+          {mode === "paste" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <div className="section-title" style={{ fontSize: 16, marginBottom: 0 }}>
+                Paste Return Series
+              </div>
+              <p style={{ color: "var(--muted)", fontSize: 13, marginTop: -4 }}>
+                Paste decimal daily returns separated by commas or newlines
+                (e.g. <code style={{ color: "var(--gold)" }}>0.012, -0.005, 0.003…</code>).
+              </p>
+              <textarea
+                rows={6}
+                placeholder={"0.012, -0.005, 0.003, 0.008, -0.011…"}
+                value={pasteText}
+                onChange={e => onPasteChange(e.target.value)}
+                style={{
+                  resize: "vertical", fontFamily: "DM Mono, monospace",
+                  fontSize: 12, lineHeight: 1.7,
+                }}
+              />
+              {pasteReturns && (
+                <div style={{
+                  display: "flex", alignItems: "center", gap: 8,
+                  color: "var(--teal)", fontSize: 12,
+                }}>
+                  <FileText size={13} />
+                  {pasteReturns.length.toLocaleString()} observations · min{" "}
+                  {Math.min(...pasteReturns).toFixed(4)} · max{" "}
+                  {Math.max(...pasteReturns).toFixed(4)}
+                </div>
+              )}
+              <ErrorBox msg={pasteError} />
+            </div>
+          )}
+
+          {/* Upload CSV */}
+          {mode === "csv" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <div className="section-title" style={{ fontSize: 16, marginBottom: 0 }}>
+                Upload CSV
+              </div>
+              <p style={{ color: "var(--muted)", fontSize: 13, marginTop: -4 }}>
+                Upload a CSV with a <code style={{ color: "var(--gold)" }}>return</code> column
+                containing decimal daily returns.
+              </p>
+
+              {!csvReturns ? (
+                <div
+                  onClick={() => fileRef.current.click()}
+                  onDragOver={e => { e.preventDefault(); setDragging(true); }}
+                  onDragLeave={() => setDragging(false)}
+                  onDrop={onDrop}
+                  style={{
+                    border: `2px dashed ${dragging ? "var(--gold)" : "var(--border)"}`,
+                    borderRadius: 10, padding: "36px 24px", textAlign: "center",
+                    cursor: "pointer", transition: "border-color 0.2s",
+                    background: dragging ? "rgba(212,172,13,0.04)" : "transparent",
+                  }}
+                >
+                  <Upload size={28} color="var(--muted)" style={{ marginBottom: 10 }} />
+                  <div style={{ color: "var(--light)", fontWeight: 500, marginBottom: 4 }}>
+                    Drop a CSV file here, or click to browse
+                  </div>
+                  <div style={{ color: "var(--muted)", fontSize: 12 }}>
+                    Must include a <code style={{ color: "var(--gold)" }}>return</code> column · ≥ 30 rows
+                  </div>
+                  <input ref={fileRef} type="file" accept=".csv,text/csv"
+                    onChange={onFileInput} style={{ display: "none" }} />
+                </div>
+              ) : (
+                <div style={{
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                  background: "var(--dark)", borderRadius: 8, padding: "12px 16px",
+                  border: "1px solid var(--border)",
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <FileText size={18} color="var(--teal)" />
+                    <div>
+                      <div style={{ fontWeight: 500, fontSize: 13 }}>{fileName}</div>
+                      <div style={{ color: "var(--muted)", fontSize: 11 }}>
+                        {csvReturns.length.toLocaleString()} observations parsed ·{" "}
+                        min {Math.min(...csvReturns).toFixed(4)} · max {Math.max(...csvReturns).toFixed(4)}
+                      </div>
+                    </div>
+                  </div>
+                  <button type="button" onClick={clearFile} style={{
+                    background: "none", border: "none", cursor: "pointer",
+                    color: "var(--muted)", padding: 4,
+                  }}>
+                    <X size={16} />
+                  </button>
+                </div>
+              )}
+
+              <ErrorBox msg={parseError} />
             </div>
           )}
         </div>
 
-        {/* Parameters */}
+        {/* ── Parameters ── */}
         <div className="card">
           <div className="section-title" style={{ fontSize: 16, marginBottom: 16 }}>Parameters</div>
           <div className="grid-3" style={{ gap: 20 }}>
             <div>
               <label>Strategy Name</label>
               <input
-                placeholder="My Portfolio"
+                placeholder={mode === "ticker" ? ticker || "My Strategy" : "My Portfolio"}
                 value={strategyName}
                 onChange={e => setStrategyName(e.target.value)}
               />
@@ -223,7 +406,7 @@ export default function NewRun() {
             <div>
               <label>Horizon (days)</label>
               <input
-                type="number" min={1} max={1260}
+                type="number" min={21} max={1260}
                 value={horizon}
                 onChange={e => setHorizon(e.target.value)}
               />
@@ -231,22 +414,12 @@ export default function NewRun() {
           </div>
         </div>
 
-        {/* Error */}
-        {error && (
-          <div style={{
-            background: "rgba(192,57,43,0.1)", border: "1px solid rgba(192,57,43,0.3)",
-            borderRadius: 8, padding: "12px 16px", color: "var(--rose)", fontSize: 13,
-          }}>
-            {error}
-          </div>
-        )}
+        {/* ── Error ── */}
+        <ErrorBox msg={error} />
 
-        {/* Status */}
+        {/* ── Status ── */}
         {running && status && (
-          <div style={{
-            display: "flex", alignItems: "center", gap: 12,
-            color: "var(--gold)", fontSize: 13,
-          }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, color: "var(--gold)", fontSize: 13 }}>
             <span className="spinner" /> {status}
           </div>
         )}
