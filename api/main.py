@@ -20,35 +20,71 @@ Endpoints:
 """
 
 import os
-import logging
 import numpy as np
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import (
-    FastAPI, Depends, HTTPException, BackgroundTasks,
-    status, Query, Request
-)
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-from fastapi.security import OAuth2PasswordRequestForm
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
-from sqlalchemy.orm import selectinload
+print("Importing logging...")
+try:
+    import logging
+    from fastapi import Request
+    from fastapi.responses import JSONResponse
+    print("✓ logging imports OK")
+except Exception as e:
+    print(f"✗ logging imports FAILED: {e}")
+    raise
 
-from db.database import get_db, init_db
-from db.models import User, ApiKey, Run, Result, RunStatus
-from api.auth import (
-    hash_password, verify_password, create_access_token,
-    generate_api_key, hash_api_key, get_current_user,
-)
-from api.schemas import (
-    RegisterRequest, TokenResponse, ApiKeyResponse, UserResponse,
-    TickerRunRequest, CustomRunRequest, CompareRequest,
-    RunStatusResponse, FullResultResponse, RunSummary,
-    PaginatedRuns, CompareResponse, CompareRow,
-)
-from api.jobs import fetch_ticker_and_run, execute_run
+print("Importing FastAPI...")
+try:
+    from fastapi import (
+        FastAPI, Depends, HTTPException, BackgroundTasks,
+        status, Query
+    )
+    from fastapi.middleware.cors import CORSMiddleware
+    from fastapi.security import OAuth2PasswordRequestForm
+    print("✓ FastAPI imports OK")
+except Exception as e:
+    print(f"✗ FastAPI imports FAILED: {e}")
+    raise
+
+print("Importing SQLAlchemy...")
+try:
+    from sqlalchemy.ext.asyncio import AsyncSession
+    from sqlalchemy import select, func
+    from sqlalchemy.orm import selectinload
+    print("✓ SQLAlchemy imports OK")
+except Exception as e:
+    print(f"✗ SQLAlchemy imports FAILED: {e}")
+    raise
+
+print("Importing db modules...")
+try:
+    from db.database import get_db, init_db
+    from db.models import User, ApiKey, Run, Result, RunStatus
+    print("✓ db imports OK")
+except Exception as e:
+    print(f"✗ db imports FAILED: {e}")
+    raise
+
+print("Importing api modules...")
+try:
+    from api.auth import (
+        hash_password, verify_password, create_access_token,
+        generate_api_key, hash_api_key, get_current_user,
+    )
+    from api.schemas import (
+        RegisterRequest, TokenResponse, ApiKeyResponse, UserResponse,
+        TickerRunRequest, CustomRunRequest, CompareRequest,
+        RunStatusResponse, FullResultResponse, RunSummary,
+        PaginatedRuns, CompareResponse, CompareRow,
+    )
+    from api.jobs import fetch_ticker_and_run, execute_run
+    print("✓ api imports OK")
+except Exception as e:
+    print(f"✗ api imports FAILED: {e}")
+    raise
+
+print("All imports successful!")
 
 
 # ── App ──────────────────────────────────────────────────────────
