@@ -64,9 +64,13 @@ app = FastAPI(
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
+allowed_origins = ["*"]
+if os.getenv("ENVIRONMENT") == "development":
+    allowed_origins.append("http://localhost:3000")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],   # tighten in production
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
