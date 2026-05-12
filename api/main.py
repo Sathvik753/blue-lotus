@@ -20,15 +20,17 @@ Endpoints:
 """
 
 import os
+import logging
 import numpy as np
 from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import (
     FastAPI, Depends, HTTPException, BackgroundTasks,
-    status, Query
+    status, Query, Request
 )
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
@@ -59,6 +61,9 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],   # tighten in production
@@ -66,6 +71,15 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.error(f"Unhandled exception on {request.method} {request.url.path}: {exc}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error", "error": str(exc)},
+    )
 
 
 @app.on_event("startup")
