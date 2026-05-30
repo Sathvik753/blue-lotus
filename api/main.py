@@ -24,6 +24,12 @@ import numpy as np
 from datetime import datetime, timezone
 from typing import Optional
 
+import logging
+from fastapi import Request
+from fastapi.responses import JSONResponse
+
+logger = logging.getLogger(__name__)
+
 from fastapi import (
     FastAPI, Depends, HTTPException, BackgroundTasks,
     status, Query
@@ -68,6 +74,15 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.error(f"Unhandled exception on {request.method} {request.url.path}: {exc}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error", "error": str(exc)},
+    )
 
 
 @app.on_event("startup")
