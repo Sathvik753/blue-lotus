@@ -59,9 +59,11 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
+_ALLOWED_ORIGINS = [o.strip() for o in os.getenv("ALLOWED_ORIGINS", "").split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],   # tighten in production
+    allow_origins=_ALLOWED_ORIGINS or ["*"],  # fallback to * only if var unset (local dev)
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -350,9 +352,10 @@ async def compare(
     rows = []
     for ticker in req.tickers:
         try:
-            df = yf.download(ticker, start=req.start_date,
-                             end=dt.date.today().strftime("%Y-%m-%d"),
-                             progress=False, auto_adjust=True)
+            t  = yf.Ticker(ticker)
+            df = t.history(start=req.start_date,
+                           end=dt.date.today().strftime("%Y-%m-%d"),
+                           auto_adjust=True)
             if df.empty:
                 continue
 
@@ -409,23 +412,3 @@ async def compare(
         generated_at=datetime.now(timezone.utc),
     )
 
-@app.post("/test/run", tags=["System"])
-async def test_run(db: AsyncSession = Depends(get_db)):
-    """Test endpoint that runs engine directly and returns error."""
-    import sys, traceback
-    sys.path.insert(0, "/app")
-    try:
-        from engine.core import InputProcessor, StructuralConstraintLayer, ConstrainedMonteCarloGenerator, StressMetricsEngine
-        import numpy as np
-        returns = np.random.normal(0.001, 0.01, 200)
-        ip = InputProcessor(winsorize=True, normalization="none")
-        cleaned, meta = ip.fit_transform(returns)
-        cl = StructuralConstraintLayer()
-        constraints = cl.fit(cleaned)
-        mc = ConstrainedMonteCarloGenerator(n_paths=500, horizon=60, random_seed=42)
-        mc_out = mc.generate(constraints)
-        sm = StressMetricsEngine()
-        stress = sm.compute(mc_out)
-        return {"status": "success", "dd_mean": float(stress.dd_mean), "es": float(stress.es_aggregate)}
-    except Exception as e:
-        return {"status": "error", "error": str(e), "traceback": traceback.format_exc()}

@@ -1,4 +1,13 @@
-const BASE = "https://blue-lotus-production.up.railway.app";
+// Base URL is injected at build time via REACT_APP_API_BASE.
+// Set it in .env.local for local dev (pointing at your local server)
+// or in your cloud build environment for production.
+// Example .env.local:
+//   REACT_APP_API_BASE=http://localhost:8000
+const BASE = process.env.REACT_APP_API_BASE || "";
+
+// Export so other components (e.g. Results export link) can reference it
+// without duplicating the URL.
+export const API_BASE = BASE;
 
 function getToken() {
   return localStorage.getItem("bl_token");

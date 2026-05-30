@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { api } from "../utils/api";
+import { api, API_BASE } from "../utils/api";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   ReferenceLine, CartesianGrid,
@@ -116,7 +116,7 @@ export default function Results() {
           </p>
         </div>
         <a
-          href={`https://blue-lotus-production.up.railway.app/run/${runId}`}
+          href={`${API_BASE}/run/${runId}`}
           target="_blank" rel="noreferrer"
           className="btn btn-secondary"
           style={{ display: "flex", alignItems: "center", gap: 8 }}

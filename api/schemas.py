@@ -63,7 +63,7 @@ class TickerRunRequest(BaseModel):
 
 class CustomRunRequest(BaseModel):
     """Run stress test on user-supplied return series."""
-    returns: List[float]    = Field(min_length=30, description="Daily return series")
+    returns: List[float]    = Field(min_length=30, max_length=100_000, description="Daily return series (max 100 000 observations)")
     strategy_name: str      = Field(default="Custom Strategy")
     n_paths: int            = Field(default=10_000, ge=1_000, le=100_000)
     horizon: int            = Field(default=252,    ge=21,    le=1260)

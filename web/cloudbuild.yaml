@@ -1,0 +1,15 @@
+steps:
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      - build
+      - "--build-arg"
+      - "REACT_APP_API_BASE=${_REACT_APP_API_BASE}"
+      - "-t"
+      - "us-central1-docker.pkg.dev/$PROJECT_ID/bluelotus/frontend:latest"
+      - "."
+
+images:
+  - "us-central1-docker.pkg.dev/$PROJECT_ID/bluelotus/frontend:latest"
+
+substitutions:
+  _REACT_APP_API_BASE: ""   # override on the CLI with --substitutions

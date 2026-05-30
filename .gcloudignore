@@ -1,0 +1,37 @@
+.gcloudignore
+.git
+.gitignore
+
+# Node
+node_modules/
+web/node_modules/
+blue-lotus/node_modules/
+
+# Separate Next.js app — not part of the API build
+blue-lotus/
+
+# Python caches
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+
+# Local env files
+.env
+.env.local
+.env.*.local
+
+# Test artifacts / notebooks
+*.ipynb
+tests/
+blue-lotus/inventory-ml/
+blue-lotus/inventory_ml/
+
+# Editor / OS
+.DS_Store
+.vscode/
+.idea/

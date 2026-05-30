@@ -132,16 +132,17 @@ async def fetch_ticker_and_run(run_id: str, ticker: str, start_date: str, config
             import yfinance as yf
             import datetime as dt
 
-            df = yf.download(ticker, start=start_date,
-                             end=dt.date.today().strftime("%Y-%m-%d"),
-                             progress=False, auto_adjust=True)
+            t   = yf.Ticker(ticker)
+            df  = t.history(start=start_date,
+                            end=dt.date.today().strftime("%Y-%m-%d"),
+                            auto_adjust=True)
             if df.empty:
-                raise ValueError(f"No data returned for {ticker}")
+                raise ValueError(
+                    f"No price data found for '{ticker}'. "
+                    "Check the symbol is correct (e.g. SPY, AAPL, BTC-USD)."
+                )
 
-            prices = df["Close"].dropna()
-            if hasattr(prices, "columns"):
-                prices = prices.iloc[:, 0]
-            prices  = prices.squeeze()
+            prices  = df["Close"].dropna().squeeze()
             returns = prices.pct_change().dropna().to_numpy(dtype=float).flatten()
 
             result_q = await db.execute(select(Run).where(Run.id == run_id))

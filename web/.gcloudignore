@@ -1,0 +1,8 @@
+.gcloudignore
+.git
+node_modules/
+build/
+.env
+.env.local
+.env.*.local
+.DS_Store

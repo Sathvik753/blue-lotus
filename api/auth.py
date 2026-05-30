@@ -20,7 +20,7 @@ from db.database import get_db
 from db.models import User, ApiKey
 
 # ── Config ───────────────────────────────────────────────────────
-SECRET_KEY      = os.getenv("SECRET_KEY", "change-me-in-production-use-openssl-rand-hex-32")
+SECRET_KEY      = os.environ["SECRET_KEY"]   # raises KeyError at startup if unset — intentional
 ALGORITHM       = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24   # 24 hours
 
