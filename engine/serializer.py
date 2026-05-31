@@ -47,7 +47,8 @@ def _ci(t, decimals=6):
 
 def serialize_run_results(mc, sm, constraints, metadata, fi, fi_grade,
                            fi_details: Optional[Dict] = None,
-                           ticker=None) -> dict:
+                           ticker=None,
+                           backtest_results=None) -> dict:
     """
     Convert a full v3.0 engine run into a clean JSON-safe dict.
 
@@ -194,6 +195,22 @@ def serialize_run_results(mc, sm, constraints, metadata, fi, fi_grade,
             "grade":   fi_grade,
             "details": {k: _safe(v, 6) for k, v in (fi_details or {}).items()},
         },
+
+        # ── Historical backtest validation ────────────────────────────────
+        "backtest": [
+            {
+                "period_label":      br.period_label,
+                "realized_max_dd":   _safe(br.realized_max_dd),
+                "predicted_dd_p5":   _safe(br.predicted_dd_p5),
+                "predicted_dd_p95":  _safe(br.predicted_dd_p95),
+                "dd_covered":        bool(br.dd_covered),
+                "realized_es":       _safe(br.realized_es),
+                "predicted_es":      _safe(br.predicted_es),
+                "coverage_ratio":    _safe(br.coverage_ratio, 3),
+                "n_observations":    int(br.n_observations),
+            }
+            for br in (backtest_results or [])
+        ],
     }
 
 

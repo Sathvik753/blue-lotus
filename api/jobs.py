@@ -51,8 +51,9 @@ async def execute_run(run_id: str, returns: np.ndarray, config: dict):
             from engine.core import (
                 InputProcessor, StructuralConstraintLayer,
                 ConstrainedMonteCarloGenerator, StressMetricsEngine,
-                compute_fragility_index,
+                compute_fragility_index, BacktestValidator,
             )
+            import numpy as _np
 
             # ── Module 1: Input Processing ─────────────────────────
             ip = InputProcessor(winsorize=True, normalization="none")
@@ -90,11 +91,22 @@ async def execute_run(run_id: str, returns: np.ndarray, config: dict):
                     cleaned, ck, mk, n_paths=min(2_000, config.get("n_paths", 10_000))
                 )
 
+            # ── Module 5b: Backtest (ticker runs only) ─────────────
+            backtest_results = []
+            raw_dates = config.get("dates")
+            if raw_dates is not None:
+                try:
+                    bv = BacktestValidator()
+                    backtest_results = bv.validate(cleaned, raw_dates, stress)
+                except Exception:
+                    pass
+
             # ── Serialize ──────────────────────────────────────────
             payload = serialize_run_results(
                 mc=mc_out, sm=stress, constraints=constraints,
                 metadata=meta, fi=fi, fi_grade=fi_grade, fi_details=fi_details,
                 ticker=config.get("ticker"),
+                backtest_results=backtest_results,
             )
 
             duration = time.perf_counter() - t_start
@@ -146,6 +158,7 @@ async def fetch_ticker_and_run(run_id: str, ticker: str, start_date: str, config
 
             prices  = df["Close"].dropna().squeeze()
             returns = prices.pct_change().dropna().to_numpy(dtype=float).flatten()
+            dates   = prices.index[1:].to_numpy()
 
             result_q = await db.execute(select(Run).where(Run.id == run_id))
             run = result_q.scalar_one_or_none()
@@ -163,4 +176,4 @@ async def fetch_ticker_and_run(run_id: str, ticker: str, start_date: str, config
                 await db.commit()
             return
 
-    await execute_run(run_id, returns, {**config, "ticker": ticker})
+    await execute_run(run_id, returns, {**config, "ticker": ticker, "dates": dates})
