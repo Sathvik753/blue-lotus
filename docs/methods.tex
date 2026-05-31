@@ -1,0 +1,496 @@
+%% ============================================================
+%%  Blue Lotus Labs — Methods Section
+%%  Suitable for SSRN working paper submission
+%%
+%%  Compile with:  pdflatex methods.tex  (twice for references)
+%%
+%%  Required packages: amsmath, amssymb, booktabs, algorithm,
+%%                     algorithmicx, algpseudocode, natbib, hyperref
+%% ============================================================
+
+\documentclass[12pt]{article}
+\usepackage[margin=1.2in]{geometry}
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage{booktabs}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{natbib}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{setspace}
+\onehalfspacing
+
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\Q}{\mathbb{Q}}
+\newcommand{\P}{\mathbb{P}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\norm}[1]{\left\lVert#1\right\rVert}
+
+\title{\textbf{Constraint-Driven Monte Carlo Stress Testing:\\
+A Unified Framework for Institutional Risk Assessment}\\[0.5em]
+\large Methods and Model Specification}
+
+\author{Blue Lotus Labs}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+%% ------------------------------------------------------------------
+\section{Overview}
+%% ------------------------------------------------------------------
+
+We describe a stress-testing engine that combines three areas of
+quantitative risk modelling: hidden Markov regime detection,
+extreme value theory (EVT) for tail estimation, and importance
+sampling via the Esscher transform.  The engine produces a
+distribution of forward-looking drawdown and expected shortfall
+(ES) estimates under a well-defined risk-neutral measure, together
+with bootstrap confidence intervals and a sensitivity index based
+on optimal transport.
+
+%% ------------------------------------------------------------------
+\section{Notation}
+%% ------------------------------------------------------------------
+
+Let $\{r_t\}_{t=1}^{T}$ be a daily return series, $r_t \in \R$.
+Denote by $L_t = -r_t$ the corresponding loss series (positive
+losses).  For a random variable $X$ and level $\alpha \in (0,1)$:
+
+\begin{align}
+  \text{VaR}_\alpha(X) &= \inf\{x : \P(X \leq x) \geq \alpha\}, \\
+  \text{ES}_\alpha(X)  &= \E\!\left[X \mid X \leq \text{VaR}_\alpha(X)\right].
+\end{align}
+
+All notation follows \citet{McNeilFreyEmbrechts2015}.
+
+%% ------------------------------------------------------------------
+\section{Module 2a — Regime Detection via Hidden Markov Model}
+%% ------------------------------------------------------------------
+
+\subsection{Model specification}
+
+We model latent market regimes with a three-state Gaussian Hidden
+Markov Model (HMM):
+\begin{equation}
+  r_t \mid S_t = k \;\sim\; \mathcal{N}(\mu_k,\, \sigma_k^2),
+  \quad k \in \{0, 1, 2\},
+\end{equation}
+where state 0 is \emph{calm} (low volatility), state 1 is
+\emph{volatile}, and state 2 is \emph{crisis}.  The hidden state
+sequence $\{S_t\}$ follows a first-order Markov chain with
+transition matrix $\mathbf{P} \in [0,1]^{3\times 3}$, $\mathbf{P}\mathbf{1}=\mathbf{1}$.
+
+\subsection{Estimation}
+
+Parameters $\Theta = \{\mathbf{P}, \mu_k, \sigma_k^2\}$ are
+estimated by maximising the log-likelihood
+$\ell(\Theta) = \log p(r_1,\ldots,r_T;\Theta)$
+using the Baum--Welch Expectation--Maximisation algorithm
+\citep{BaumWelch1972}.  To reduce sensitivity to initialisation,
+we run $n_{\text{init}} = 10$ random restarts and retain the
+solution with the highest log-likelihood.
+
+State labelling: after estimation, states are ordered by emission
+standard deviation $\sigma_k$ (ascending), ensuring consistent
+assignment of calm, volatile, and crisis regimes across datasets.
+
+\subsection{Model selection}
+
+Fit quality is assessed via:
+\begin{equation}
+  \text{AIC} = 2p - 2\ell(\hat\Theta), \qquad
+  \text{BIC} = p\log T - 2\ell(\hat\Theta),
+\end{equation}
+where $p = (K-1) + K(K-1) + 2K$ counts the free parameters
+(initial distribution, transition matrix, emission means and
+variances) and $K=3$.
+
+The Viterbi algorithm decodes the most probable state sequence
+$\hat S_{1:T}$.
+
+%% ------------------------------------------------------------------
+\section{Module 2b — Tail Risk via Extreme Value Theory}
+%% ------------------------------------------------------------------
+
+\subsection{Peaks-over-Threshold method}
+
+Standard parametric tail models (Student-$t$, normal) underestimate
+extreme quantile risk because they lack flexibility in the far tail.
+We instead apply the Peaks-over-Threshold (PoT) approach from
+Extreme Value Theory \citep{Pickands1975}.
+
+For a threshold $u$ (chosen below), let
+$Y_i = L_i - u$ for all $L_i > u$ denote the \emph{exceedances}.
+The Pickands--Balkema--de Haan theorem states that, for a
+sufficiently high $u$, the distribution of $Y$ converges to a
+Generalized Pareto Distribution (GPD):
+\begin{equation}
+  F_u(y) = 1 - \left(1 + \frac{\xi y}{\beta}\right)^{-1/\xi},
+  \quad y > 0,
+\end{equation}
+with shape $\xi \in \R$ and scale $\beta > 0$.
+
+\subsection{Threshold selection}
+
+We select $u$ using a stability diagnostic on the Hill estimator of
+the tail index.  For $k$ order statistics, the Hill estimator is
+\citep{Hill1975}:
+\begin{equation}
+  \hat\xi_k^{\text{Hill}} = \frac{1}{k}\sum_{i=1}^{k}
+    \left[\log L_{(i)} - \log L_{(k+1)}\right],
+\end{equation}
+where $L_{(1)} \geq \cdots \geq L_{(n)}$ are the sorted losses.
+The optimal $k^*$ minimises the local variance of $\hat\xi_k^{\text{Hill}}$
+over a sliding window, corresponding to the plateau region of the
+Hill plot.  We search over $k \in [0.02n,\, 0.15n]$.
+
+\subsection{GPD fitting and analytical risk measures}
+
+Given the optimal threshold $u^* = L_{(k^*+1)}$ and $N_u = k^*$
+exceedances, GPD parameters $(\hat\xi, \hat\beta)$ are estimated by
+maximum likelihood.
+
+Analytical risk measures follow directly \citep{McNeilFrey2000}:
+\begin{align}
+  \widehat{\text{VaR}}_\alpha &= u^* + \frac{\hat\beta}{\hat\xi}
+    \left[\left(\frac{\alpha n}{N_u}\right)^{-\hat\xi} - 1\right],
+    \label{eq:gpd_var}\\
+  \widehat{\text{ES}}_\alpha  &= \frac{\widehat{\text{VaR}}_\alpha + \hat\beta - \hat\xi u^*}
+    {1 - \hat\xi},
+    \label{eq:gpd_es}
+\end{align}
+for $\hat\xi \neq 0$ and $\hat\xi < 1$ (finite mean condition).
+The exponential-tail case ($\hat\xi \to 0$) is handled separately.
+
+%% ------------------------------------------------------------------
+\section{Module 2c — Bayesian Shrinkage of Regime Parameters}
+%% ------------------------------------------------------------------
+
+Raw within-regime sample means and variances suffer from estimation
+error due to the limited number of observations per regime.  We
+apply conjugate posterior shrinkage.
+
+\paragraph{Posterior mean.}
+Using a Gaussian--Gaussian conjugate model:
+\begin{equation}
+  \hat\mu_k^* = w_k\,\bar r_k + (1-w_k)\,\mu_0, \qquad
+  w_k = \frac{n_k/\sigma^2}{n_k/\sigma^2 + 1/\tau^2},
+\end{equation}
+where $\mu_0 = \bar r$ is the grand mean, $\sigma^2$ the pooled
+variance, and $\tau^2 = \widehat{\mathrm{Var}}(\{\mu_k\})$ the
+between-regime variance (ANOVA estimate).
+
+\paragraph{Posterior variance.}
+Using the inverse-gamma conjugate update:
+\begin{equation}
+  \hat\sigma_k^{*2} = \frac{\beta_{\text{IG}} + \frac{1}{2}SS_k}
+    {\alpha_{\text{IG}} + \frac{n_k}{2} - 1},
+\end{equation}
+with hyperparameters $\alpha_{\text{IG}} = 3$, $\beta_{\text{IG}} = \sigma^2(\alpha_{\text{IG}}-1)$.
+
+%% ------------------------------------------------------------------
+\section{Change of Measure: Esscher Tilting}
+%% ------------------------------------------------------------------
+
+\subsection{Motivation}
+
+Naive Monte Carlo samples paths under the empirical (historical)
+measure $\P$.  We instead seek a measure $\Q$ that simultaneously
+enforces two constraints on the simulated path distribution:
+(i) the mean return equals a target $\mu^*$, and (ii) the expected
+shortfall at level $\alpha$ equals the GPD estimate $\text{ES}^*$.
+
+\subsection{Esscher transform}
+
+Following \citet{GerberShiu1994}, we define tilted weights:
+\begin{equation}
+  w_i \propto \exp\!\left(\lambda_1 \bar r_i
+    + \lambda_2 \bar r_i \cdot \mathbf{1}[\bar r_i \leq \widehat{\text{VaR}}_\alpha]\right),
+\end{equation}
+where $\bar r_i$ is the mean return of path $i$.
+The Lagrange multipliers $(\lambda_1, \lambda_2)$ solve the system:
+\begin{align}
+  \E_\Q[\bar r] &= \mu^*, \\
+  \E_\Q[\bar r \mid \bar r \leq \widehat{\text{VaR}}_\alpha] &= \text{ES}^*.
+\end{align}
+
+\subsection{Numerical solution}
+
+The system is solved via \texttt{scipy.optimize.fsolve} with five
+random starting points.  The solution with the smallest residual
+norm is retained; if this norm exceeds $10^{-4}$, the solver falls
+back to identity weights ($\lambda_1 = \lambda_2 = 0$), preserving
+the simulation under $\P$.
+
+Paths are then importance-resampled with replacement according to
+the normalised weights $w_i / \sum_j w_j$, yielding a new path set
+distributed under $\Q$.
+
+%% ------------------------------------------------------------------
+\section{Module 4 — Stress Metrics and Bootstrap Confidence Intervals}
+%% ------------------------------------------------------------------
+
+\subsection{Maximum drawdown}
+
+For each path $\{r_t^{(i)}\}_{t=1}^H$, define the cumulative return
+$C_t^{(i)} = \sum_{s=1}^t r_s^{(i)}$ and running maximum
+$M_t^{(i)} = \max_{s \leq t} C_s^{(i)}$.  The maximum drawdown is:
+\begin{equation}
+  D^{(i)} = \min_{1 \leq t \leq H}\left(C_t^{(i)} - M_t^{(i)}\right) \leq 0.
+\end{equation}
+Key statistics: $\bar D = \frac{1}{N}\sum_i D^{(i)}$,
+$D_{0.05} = \text{VaR}_{0.05}(D^{(i)})$, and the 90\% confidence
+interval $[D_{0.05}^{\text{dist}}, D_{0.95}^{\text{dist}}]$ across paths.
+
+\subsection{Expected Shortfall on paths}
+
+For each path, per-path ES at level $\alpha$:
+\begin{equation}
+  \text{ES}_\alpha^{(i)} =
+    \frac{1}{\lfloor\alpha H\rfloor}\sum_{t: r_t^{(i)} \leq q_\alpha^{(i)}} r_t^{(i)},
+\end{equation}
+and the aggregate ES over all paths:
+\begin{equation}
+  \overline{\text{ES}}_\alpha = \E_\Q\!\left[r_t \mid r_t \leq \text{VaR}_\alpha\right].
+\end{equation}
+
+\subsection{Bootstrap confidence intervals}
+
+All scalar metrics $\theta$ (drawdown mean, ES aggregate, recovery time)
+are reported with 90\% bootstrap confidence intervals.  We draw
+$B = 500$ bootstrap path samples (resampling paths with replacement)
+and compute the statistic on each:
+\begin{equation}
+  \widehat{\text{CI}}_{90\%}(\theta) =
+    \left[\hat\theta^*_{(0.05B)},\; \hat\theta^*_{(0.95B)}\right].
+\end{equation}
+
+%% ------------------------------------------------------------------
+\section{Module 4b — Multi-Asset Extension}
+%% ------------------------------------------------------------------
+
+For a portfolio of $N$ assets with weight vector $\mathbf{w}$, we model
+the joint return distribution using a multivariate Gaussian:
+\begin{equation}
+  \mathbf{r}_t \sim \mathcal{N}(\boldsymbol\mu,\, \boldsymbol\Sigma),
+\end{equation}
+where $\boldsymbol\Sigma$ is estimated via the Ledoit--Wolf shrinkage
+estimator \citep{LedoitWolf2004}:
+\begin{equation}
+  \hat{\boldsymbol\Sigma}_{\text{LW}} =
+    (1-\rho)\,\mathbf{S} + \rho\,\mathbf{F},
+\end{equation}
+with $\mathbf{S}$ the sample covariance, $\mathbf{F}$ a structured target
+(scaled identity), and $\rho^*$ the analytic shrinkage intensity.
+
+Correlated paths are generated via Cholesky decomposition:
+$\mathbf{L} = \text{chol}(\hat{\boldsymbol\Sigma}_{\text{LW}})$,
+$\mathbf{r}_t^{(i)} = \boldsymbol\mu + \mathbf{L}\mathbf{z}_t^{(i)}$,
+$\mathbf{z}_t^{(i)} \sim \mathcal{N}(\mathbf{0},\mathbf{I})$.
+
+Portfolio returns are $p_t^{(i)} = \mathbf{w}^\top \mathbf{r}_t^{(i)}$,
+and all stress metrics are computed on $\{p_t^{(i)}\}$.
+
+%% ------------------------------------------------------------------
+\section{Module 5 — Model Fragility Index}
+%% ------------------------------------------------------------------
+
+\subsection{Definition}
+
+The Model Fragility Index (MFI) quantifies the sensitivity of the
+risk estimates to small parameter perturbations using the
+Wasserstein-1 (Earth Mover's) distance \citep{Villani2008}.
+
+Let $D_0 = \{D^{(i)}\}$ be the baseline drawdown distribution and
+$D_\theta$ the distribution under perturbation $\theta \in \Theta$.
+Define:
+\begin{equation}
+  \text{MFI} = \frac{1}{|\Theta|}\sum_{\theta\in\Theta}
+    \frac{W_1(D_0,\, D_\theta)}{|\overline{\text{ES}}_0|},
+\end{equation}
+where
+$W_1(\mu,\nu) = \int_0^1 |F_\mu^{-1}(u) - F_\nu^{-1}(u)|\,du$
+is the Wasserstein-1 distance between the two CDFs and
+$|\overline{\text{ES}}_0|$ normalises for scale.
+
+\subsection{Perturbation set $\Theta$}
+
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+Name & Parameter & Perturbation \\
+\midrule
+\texttt{mean\_+10pct}  & Regime means    & $\times 1.10$ \\
+\texttt{mean\_-10pct}  & Regime means    & $\times 0.90$ \\
+\texttt{vol\_+20pct}   & Regime std devs & $\times 1.20$ \\
+\texttt{vol\_-20pct}   & Regime std devs & $\times 0.80$ \\
+\texttt{trans\_±15pct} & Transition matrix & Dirichlet noise $\pm 15\%$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Interpretation}
+
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+MFI range & Grade & Interpretation \\
+\midrule
+$[0,\, 0.25)$ & Robust   & Estimates stable across perturbations \\
+$[0.25, 0.55)$ & Moderate & Some sensitivity to model inputs \\
+$[0.55, \infty)$ & Fragile  & Estimates sensitive; interpret with caution \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+This formalises the intuition from \citet{ContDeguest2013} that a
+``good'' risk model should not change its conclusions under small,
+plausible misspecifications of its inputs.
+
+%% ------------------------------------------------------------------
+\section{Module 5b — Historical Backtest Validation}
+%% ------------------------------------------------------------------
+
+We validate the engine's predictions against three documented stress
+episodes (Table~\ref{tab:backtest_periods}).
+
+\begin{table}[h]
+\centering
+\caption{Stress periods used for backtest validation.}
+\label{tab:backtest_periods}
+\begin{tabular}{lll}
+\toprule
+Period & Start & End \\
+\midrule
+2008 Financial Crisis  & Sep 2007 & Mar 2009 \\
+March 2020 COVID Crash & Feb 2020 & Apr 2020 \\
+2022 Rate Shock        & Jan 2022 & Oct 2022 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+For each period $p$ with $n_p$ trading days, we compute:
+\begin{itemize}
+  \item \textbf{Realized max drawdown}: $D_p^{\text{real}} = \min_t(C_t^p - M_t^p)$.
+  \item \textbf{Predicted} 5th-percentile drawdown $D_{0.05}$ from the
+    full-sample engine run.
+  \item \textbf{Coverage}: whether $D_p^{\text{real}} \in
+    [D_{0.05}^{\text{pred}}, D_{0.95}^{\text{pred}}]$.
+  \item \textbf{Coverage ratio}: $D_p^{\text{real}} / D_{0.05}^{\text{pred}}$
+    (ratio $> 1$ indicates under-estimation of risk; $< 1$ indicates
+    over-estimation).
+\end{itemize}
+
+\noindent\textit{Note:} This is an in-sample backtest since the engine
+is fitted on the full return history which includes the stress periods.
+A rigorous out-of-sample evaluation would re-fit the model on data up
+to the start of each period; this is left for future work.
+
+%% ------------------------------------------------------------------
+\section{Summary of Computational Complexity}
+%% ------------------------------------------------------------------
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+Step & Complexity \\
+\midrule
+HMM fitting (Baum-Welch, $n_{\text{init}}$ restarts) & $O(n_{\text{init}}\cdot T \cdot K^2)$ \\
+GPD threshold search & $O(T \log T)$ \\
+Monte Carlo generation ($N$ paths, $H$ steps) & $O(NH)$ \\
+Esscher solver (5 starting points) & $O(N)$ \\
+Bootstrap CIs ($B$ resamples) & $O(BNH)$ \\
+Wasserstein MFI (5 perturbations) & $O(5 \cdot NH + 5 \cdot N \log N)$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+For $T=3{,}800$ (SPY 2010--2025), $N=10{,}000$, $H=252$, $B=500$,
+the full pipeline completes in approximately 60--90 seconds on a
+single CPU core.
+
+%% ------------------------------------------------------------------
+\section{Limitations and Extensions}
+%% ------------------------------------------------------------------
+
+Several limitations warrant attention.
+
+\paragraph{Stationarity.}  The HMM assumes stationary transition
+probabilities and emission distributions.  In practice, these
+parameters shift over time (e.g., post-2008 regulatory changes alter
+the probability of crisis regimes).  Time-varying HMMs or
+regime-switching GARCH models could address this.
+
+\paragraph{Gaussian emissions.}  Within each regime, returns are
+assumed Gaussian.  While the GPD tail corrects for this at the extreme
+quantile level, the body of the regime distributions remains
+symmetrically parametrised.  Asymmetric emission models (e.g.,
+skew-$t$) would improve fit at intermediate quantiles.
+
+\paragraph{Single-factor regimes.}  The HMM detects regimes based on
+univariate return dynamics.  A multivariate HMM incorporating volume,
+implied volatility, or credit spreads as additional signals could
+improve regime detection quality.
+
+\paragraph{In-sample backtest.}  The historical backtest in Module 5b
+uses the full return history for fitting.  Walk-forward validation
+would provide a stronger empirical test of predictive performance.
+
+%% ------------------------------------------------------------------
+\bibliographystyle{plainnat}
+\begin{thebibliography}{99}
+
+\bibitem[Baum \& Welch(1972)]{BaumWelch1972}
+Baum, L.~E. and Welch, G.~E. (1972).
+\newblock An inequality and associated maximization technique in statistical
+  estimation for probabilistic functions of Markov processes.
+\newblock \emph{Inequalities}, 3, 1--8.
+
+\bibitem[Cont \& Deguest(2013)]{ContDeguest2013}
+Cont, R. and Deguest, R. (2013).
+\newblock Robustness and sensitivity analysis of risk measurement procedures.
+\newblock \emph{Quantitative Finance}, 10(6), 593--606.
+
+\bibitem[Gerber \& Shiu(1994)]{GerberShiu1994}
+Gerber, H.~U. and Shiu, E.~S.~W. (1994).
+\newblock Option pricing by Esscher transforms.
+\newblock \emph{Transactions of the Society of Actuaries}, 46, 99--191.
+
+\bibitem[Hill(1975)]{Hill1975}
+Hill, B.~M. (1975).
+\newblock A simple general approach to inference about the tail of a
+  distribution.
+\newblock \emph{The Annals of Statistics}, 3(5), 1163--1174.
+
+\bibitem[Ledoit \& Wolf(2004)]{LedoitWolf2004}
+Ledoit, O. and Wolf, M. (2004).
+\newblock A well-conditioned estimator for large-dimensional covariance
+  matrices.
+\newblock \emph{Journal of Multivariate Analysis}, 88(2), 365--411.
+
+\bibitem[McNeil \& Frey(2000)]{McNeilFrey2000}
+McNeil, A.~J. and Frey, R. (2000).
+\newblock Estimation of tail-related risk measures for heteroscedastic
+  financial time series: an extreme value approach.
+\newblock \emph{Journal of Empirical Finance}, 7(3-4), 271--300.
+
+\bibitem[McNeil, Frey \& Embrechts(2015)]{McNeilFreyEmbrechts2015}
+McNeil, A.~J., Frey, R. and Embrechts, P. (2015).
+\newblock \emph{Quantitative Risk Management: Concepts, Techniques and Tools},
+  revised edition.
+\newblock Princeton University Press.
+
+\bibitem[Pickands(1975)]{Pickands1975}
+Pickands, J. (1975).
+\newblock Statistical inference using extreme order statistics.
+\newblock \emph{The Annals of Statistics}, 3(1), 119--131.
+
+\bibitem[Villani(2008)]{Villani2008}
+Villani, C. (2008).
+\newblock \emph{Optimal Transport: Old and New}.
+\newblock Springer.
+
+\end{thebibliography}
+
+\end{document}

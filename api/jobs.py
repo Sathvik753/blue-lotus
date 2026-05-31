@@ -81,17 +81,19 @@ async def execute_run(run_id: str, returns: np.ndarray, config: dict):
             sm_engine = StressMetricsEngine()
             stress    = sm_engine.compute(mc_out)
 
-            # ── Module 5: Fragility Index ──────────────────────────
-            fi, fi_grade = None, None
+            # ── Module 5: Fragility Index (Wasserstein MFI) ───────
+            fi, fi_grade, fi_details = None, None, {}
             if config.get("run_sensitivity", True):
                 ck = dict(moderate_dd=moderate_dd, severe_dd=severe_dd)
                 mk = dict(n_paths=config.get("n_paths", 10_000), horizon=config.get("horizon", 252))
-                fi, fi_grade = compute_fragility_index(cleaned, ck, mk, n_trials=10, n_paths=1_000)
+                fi, fi_grade, fi_details = compute_fragility_index(
+                    cleaned, ck, mk, n_paths=min(2_000, config.get("n_paths", 10_000))
+                )
 
             # ── Serialize ──────────────────────────────────────────
             payload = serialize_run_results(
                 mc=mc_out, sm=stress, constraints=constraints,
-                metadata=meta, fi=fi, fi_grade=fi_grade,
+                metadata=meta, fi=fi, fi_grade=fi_grade, fi_details=fi_details,
                 ticker=config.get("ticker"),
             )
 
