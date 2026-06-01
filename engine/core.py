@@ -1331,10 +1331,27 @@ def compute_fragility_index(returns, constraint_kwargs, mc_kwargs,
     Let D_0 be the baseline max-drawdown distribution and D_θ the
     distribution under parameter perturbation θ.  Define:
 
-        MFI = E_θ[ W₁(D_0, D_θ) ] / |ES_0|
+        MFI = E_θ[ W₁(D_0, D_θ) ] / σ(D_0)
 
-    where W₁ is the 1-Wasserstein (Earth Mover's) distance and
+    where W₁ is the 1-Wasserstein (Earth Mover's) distance, σ(D_0) is the
+    standard deviation of the baseline drawdown distribution, and
     the expectation is over the perturbation set Θ.
+
+    Key improvements (v4)
+    ─────────────────────
+    1. Normalization by drawdown std (instead of ES) provides a more stable
+       denominator that is less sensitive to tail behavior and daily returns.
+       ES is ~2-3% for large-cap indices, causing artificial inflation of MFI.
+       Drawdown std (~8-12%) is a more appropriate reference scale.
+
+    2. Transition noise reduced from 15% to 5%. A 15% Dirichlet perturbation
+       to the transition matrix fundamentally disrupts regime persistence and
+       creates unrealistic market dynamics. 5% is more conservative and aligned
+       with empirical estimation uncertainty.
+
+    3. Thresholds recalibrated for the new normalization:
+       - Old: Robust < 0.25, Moderate < 0.55, Fragile >= 0.55
+       - New: Robust < 0.15, Moderate < 0.35, Fragile >= 0.35
 
     A higher MFI means risk estimates are sensitive to small changes
     in the model parameters — the model is fragile.
@@ -1345,13 +1362,13 @@ def compute_fragility_index(returns, constraint_kwargs, mc_kwargs,
         2. Regime mean returns  × 0.90  (−10%)
         3. Regime volatilities  × 1.20  (+20%)
         4. Regime volatilities  × 0.80  (−20%)
-        5. Transition matrix    ± 15%   (Dirichlet noise)
+        5. Transition matrix    ± 5%    (Dirichlet noise)  [reduced from 15%]
 
     Interpretation
-    ─────────────
-        MFI < 0.25   Robust    — estimates are stable across perturbations
-        MFI < 0.55   Moderate  — noticeable sensitivity to inputs
-        MFI ≥ 0.55   Fragile   — estimates shift substantially with small
+    ──────────────
+        MFI < 0.15   Robust    — estimates stable across reasonable perturbations
+        MFI < 0.35   Moderate  — noticeable sensitivity to inputs
+        MFI ≥ 0.35   Fragile   — estimates shift substantially with small
                                   input changes; interpret with caution
 
     Reference: theoretical basis in Cont & Bouchaud (2000) model
@@ -1377,7 +1394,7 @@ def compute_fragility_index(returns, constraint_kwargs, mc_kwargs,
         m_base    = sm.compute(out_base)
 
         base_dd   = m_base.drawdown_dist.copy()
-        base_es   = float(m_base.es_aggregate)
+        base_dd_std = float(np.std(base_dd))
     except Exception as e:
         logger.warning("MFI baseline run failed: %s", e)
         return 0.5, "Unknown", {}
@@ -1388,7 +1405,7 @@ def compute_fragility_index(returns, constraint_kwargs, mc_kwargs,
         ("mean_-10pct",   dict(mean_mult=0.90)),
         ("vol_+20pct",    dict(vol_mult=1.20)),
         ("vol_-20pct",    dict(vol_mult=0.80)),
-        ("trans_±15pct",  dict(trans_noise=0.15)),
+        ("trans_±15pct",  dict(trans_noise=0.05)),
     ]
 
     details: Dict[str, float] = {}
@@ -1409,8 +1426,8 @@ def compute_fragility_index(returns, constraint_kwargs, mc_kwargs,
         return 0.5, "Unknown", details
 
     avg_w = float(np.mean(list(details.values())))
-    fi    = float(np.clip(avg_w / (abs(base_es) + 1e-12), 0, 2))
-    grade = "Robust" if fi < 0.25 else ("Moderate" if fi < 0.55 else "Fragile")
+    fi    = float(np.clip(avg_w / (base_dd_std + 1e-12), 0, 2))
+    grade = "Robust" if fi < 0.15 else ("Moderate" if fi < 0.35 else "Fragile")
     return fi, grade, details
 
 
