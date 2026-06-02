@@ -327,15 +327,26 @@ class RegimeModel:
         # Viterbi decoding
         raw_labels = best_model.predict(X)
 
-        # Order states by emission standard deviation (ascending → calm, volatile, crisis)
-        vols  = np.sqrt(best_model.covars_.flatten())
-        order = np.argsort(vols)                          # indices: lowest vol first
+        # Order states by risk-adjusted score: mean − 2×std  (descending)
+        #
+        # Ordering by variance alone assigns "crisis" to any high-vol state,
+        # including sustained-but-positive bull-market vol.  Using
+        # mean − 2×std ensures the crisis state has BOTH high variance AND
+        # negative expected return — the genuine financial definition.
+        #
+        #   Calm    → highest score  (positive drift, low vol)  → state 0
+        #   Volatile→ middle score   (near-zero drift, med vol) → state 1
+        #   Crisis  → lowest score   (negative drift, high vol) → state 2
+        raw_means = best_model.means_.flatten()
+        vols      = np.sqrt(best_model.covars_.flatten())
+        risk_score = raw_means - 2.0 * vols          # lower = more crisis-like
+        order = np.argsort(risk_score)[::-1]         # descending: calm first, crisis last
         remap = {int(order[i]): i for i in range(self.n_components)}
         labels = np.array([remap[s] for s in raw_labels], dtype=int)
 
         # Re-order parameters to match calm=0, volatile=1, crisis=2
         P = best_model.transmat_[np.ix_(order, order)]
-        regime_means = best_model.means_.flatten()[order]
+        regime_means = raw_means[order]
         regime_stds  = vols[order]
 
         # Stationary distribution via dominant left eigenvector
