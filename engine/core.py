@@ -855,10 +855,12 @@ class ConstrainedMonteCarloGenerator:
 
     def __init__(self, n_paths: int = 10_000, horizon: int = 252,
                  random_seed: int = 42, stress_fraction: float = 0.20,
+                 drawdown_floor: float = -0.70,
                  **kwargs):
         self.n_paths         = n_paths
         self.horizon         = horizon
         self.stress_fraction = stress_fraction
+        self.drawdown_floor  = drawdown_floor   # cumulative loss floor (e.g. -0.70 = -70%)
         self.rng             = np.random.default_rng(random_seed)
 
     def generate(self, constraints: ConstraintLayerOutput) -> MonteCarloOutput:
@@ -910,8 +912,16 @@ class ConstrainedMonteCarloGenerator:
                         + w * rng.normal(dd_cp[s]["mean"], dd_cp[s]["std"], mask.sum())
                     )
 
+            # Drawdown floor clamp: paths that have already lost more than
+            # `drawdown_floor` (e.g. -70%) cannot lose further — they are
+            # treated as stopped out.  This prevents runaway compounding in
+            # tail paths and keeps the simulation physically realistic.
+            floor_hit         = cumulative <= self.drawdown_floor
+            returns_t[floor_hit] = 0.0
+
             paths[:, t] = returns_t
             cumulative  += returns_t
+            cumulative   = np.maximum(cumulative, self.drawdown_floor)  # hard clamp
 
             # Update per-path running maximum (correct drawdown tracking)
             running_max_per_path = np.maximum(running_max_per_path, cumulative)
@@ -1798,6 +1808,7 @@ class BlueLotusEngine:
                  known_risk_limit: Optional[float] = None,
                  n_paths: int = 10_000, horizon: int = 252,
                  random_seed: int = 42, stress_fraction: float = 0.20,
+                 drawdown_floor: float = -0.70,
                  k_worst: int = 10, n_bootstrap: int = 500,
                  run_sensitivity: bool = True,
                  run_backtest: bool = True,
@@ -1822,6 +1833,7 @@ class BlueLotusEngine:
             horizon         = horizon,
             random_seed     = random_seed,
             stress_fraction = stress_fraction,
+            drawdown_floor  = drawdown_floor,
         )
 
         self.ip = InputProcessor(winsorize=winsorize, normalization=normalization)
