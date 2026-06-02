@@ -191,10 +191,74 @@ class RegimeModel:
         Number of random restarts (default 10).
     """
 
-    def __init__(self, n_components: int = 3, n_iter: int = 200, n_init: int = 10):
-        self.n_components = n_components
-        self.n_iter       = n_iter
-        self.n_init       = n_init
+    def __init__(self, n_components: int = 3, n_iter: int = 200, n_init: int = 10,
+                 min_crisis_duration: int = 3):
+        self.n_components       = n_components
+        self.n_iter             = n_iter
+        self.n_init             = n_init
+        self.min_crisis_duration = min_crisis_duration
+
+    # ── Minimum-duration smoothing ────────────────────────────────────────────
+
+    def _smooth_crisis(self, labels: np.ndarray) -> np.ndarray:
+        """
+        Require at least `min_crisis_duration` consecutive days before a run
+        of state-2 observations is classified as "crisis".
+
+        Isolated spikes shorter than that threshold are reclassified as
+        state 1 (volatile), which prevents single noisy days from being
+        miscounted as crisis events.
+
+        This addresses the tendency of 3-state HMMs to overassign the
+        highest-variance state to isolated outlier observations.
+        """
+        if self.min_crisis_duration <= 1:
+            return labels.copy()
+
+        smoothed = labels.copy()
+        T = len(smoothed)
+        i = 0
+        while i < T:
+            if smoothed[i] == 2:
+                j = i
+                while j < T and smoothed[j] == 2:
+                    j += 1
+                if (j - i) < self.min_crisis_duration:
+                    smoothed[i:j] = 1   # bump short crisis run to volatile
+                i = j
+            else:
+                i += 1
+        return smoothed
+
+    # ── Recompute stats from (possibly smoothed) labels ───────────────────────
+
+    def _stats_from_labels(self, returns: np.ndarray,
+                           labels: np.ndarray) -> tuple:
+        """
+        Recompute transition matrix, per-regime means/stds, and stationary
+        distribution from a label sequence.  Used after smoothing so that
+        all downstream parameters are consistent with the corrected labels.
+        """
+        T  = len(labels)
+        P  = np.ones((3, 3))          # Laplace smoothing
+        for t in range(T - 1):
+            P[labels[t], labels[t + 1]] += 1
+        P /= P.sum(axis=1, keepdims=True)
+
+        means = np.array([
+            np.mean(returns[labels == k]) if (labels == k).sum() > 1 else np.mean(returns)
+            for k in range(3)
+        ])
+        stds = np.array([
+            np.std(returns[labels == k], ddof=1) if (labels == k).sum() > 1 else np.std(returns, ddof=1)
+            for k in range(3)
+        ])
+
+        eigvals, eigvecs = np.linalg.eig(P.T)
+        pi = np.abs(np.real(eigvecs[:, np.argmin(np.abs(eigvals - 1.0))]))
+        pi /= pi.sum()
+
+        return P, means, stds, pi
 
     # ── Internal: rolling-vol fallback ───────────────────────────────────────
 
@@ -212,22 +276,8 @@ class RegimeModel:
         labels   = np.where(roll_vol <= v33, 0, np.where(roll_vol <= v66, 1, 2))
         labels[drawdown < np.percentile(drawdown, 10)] = 2
 
-        P = np.ones((3, 3))
-        for t in range(T - 1):
-            P[labels[t], labels[t + 1]] += 1
-        P /= P.sum(axis=1, keepdims=True)
-
-        means = np.array([
-            np.mean(returns[labels == k]) if (labels == k).sum() > 1 else np.mean(returns)
-            for k in range(3)
-        ])
-        stds = np.array([
-            np.std(returns[labels == k], ddof=1) if (labels == k).sum() > 1 else np.std(returns, ddof=1)
-            for k in range(3)
-        ])
-        eigvals, eigvecs = np.linalg.eig(P.T)
-        pi = np.abs(np.real(eigvecs[:, np.argmin(np.abs(eigvals - 1.0))]))
-        pi /= pi.sum()
+        labels = self._smooth_crisis(labels)
+        P, means, stds, pi = self._stats_from_labels(returns, labels)
 
         return RegimeModelOutput(
             transition_matrix = P,
@@ -307,6 +357,21 @@ class RegimeModel:
         if min_frac < 0.02:
             logger.warning("HMM produced a degenerate state (< 2%% of observations) — using rolling-vol fallback.")
             return self._rolling_vol_fit(returns)
+
+        # Apply minimum-duration filter to prevent isolated vol spikes from
+        # being classified as crisis.  Recompute transition matrix and
+        # emission stats from the smoothed labels so all parameters are
+        # consistent with the corrected state sequence.
+        labels = self._smooth_crisis(labels)
+        P, regime_means, regime_stds, pi = self._stats_from_labels(returns, labels)
+
+        crisis_frac = float((labels == 2).mean())
+        if crisis_frac > 0.15:
+            logger.warning(
+                "Crisis regime fraction %.1f%% > 15%% after smoothing. "
+                "Consider increasing min_crisis_duration or checking data quality.",
+                crisis_frac * 100,
+            )
 
         return RegimeModelOutput(
             transition_matrix = P,
@@ -652,9 +717,10 @@ class StructuralConstraintLayer:
                  moderate_dd: float = -0.05, severe_dd: float = -0.15,
                  implied_vol: Optional[float] = None,
                  known_risk_limit: Optional[float] = None,
+                 min_crisis_duration: int = 3,
                  # legacy kwargs accepted but ignored
                  **kwargs):
-        self.regime_model = RegimeModel()
+        self.regime_model = RegimeModel(min_crisis_duration=min_crisis_duration)
         self.tail_layer   = TailConstraintLayer(alpha=tail_alpha)
         self.bayes_layer  = BayesianShrinkageLayer(alpha_ig=alpha_ig, beta_ig=beta_ig)
         self.dd_layer     = DrawdownConditioningLayer(
