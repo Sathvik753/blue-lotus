@@ -208,9 +208,29 @@ function BacktestRow({ br }) {
 export default function Results() {
   const { runId }  = useParams();
   const navigate   = useNavigate();
-  const [data, setData]       = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError]     = useState("");
+  const [data, setData]           = useState(null);
+  const [loading, setLoading]     = useState(true);
+  const [error, setError]         = useState("");
+  const [exporting, setExporting] = useState(false);
+
+  async function handleExport() {
+    if (!data) return;
+    setExporting(true);
+    try {
+      const res = await api.get(`/run/${runId}`);
+      const json = JSON.stringify(res.data, null, 2);
+      const blob = new Blob([json], { type: "application/json" });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement("a");
+      const name = (data.strategy_name || data.ticker || "run").replace(/\s+/g, "_");
+      a.href     = url;
+      a.download = `bluelotus_${name}_${runId.slice(0, 8)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setExporting(false);
+    }
+  }
 
   useEffect(() => {
     async function load() {
@@ -289,10 +309,14 @@ export default function Results() {
             {data.completed_at ? new Date(data.completed_at).toLocaleString() : ""}
           </p>
         </div>
-        <a href={`${API_BASE}/run/${runId}`} target="_blank" rel="noreferrer"
-          className="btn btn-secondary" style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <Download size={14} /> Export JSON
-        </a>
+        <button
+          onClick={handleExport}
+          disabled={exporting}
+          className="btn btn-secondary"
+          style={{ display: "flex", alignItems: "center", gap: 8 }}
+        >
+          <Download size={14} /> {exporting ? "Downloading…" : "Export JSON"}
+        </button>
       </div>
 
       {/* ── Key metric cards ── */}
@@ -579,11 +603,11 @@ export default function Results() {
               Regime Model (HMM)
             </div>
             {[
-              ["Type",           "3-state Gaussian HMM"],
-              ["Estimation",     "Baum-Welch EM"],
-              ["AIC",            hmm.aic != null ? hmm.aic.toFixed(0) : "—"],
-              ["BIC",            hmm.bic != null ? hmm.bic.toFixed(0) : "—"],
-              ["Log-likelihood", hmm.log_likelihood != null ? hmm.log_likelihood.toFixed(0) : "—"],
+              ["Type",           "3-state RV-Percentile"],
+              ["Estimation",     "Deterministic (auditable)"],
+              ["Calm threshold",  "< 70th vol percentile"],
+              ["Crisis threshold","≥ 90th vol + neg. trend"],
+              ["Min crisis run",  "5 consecutive days"],
             ].map(([label, val]) => (
               <div key={label} style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, fontSize: 12 }}>
                 <span style={{ color: MUTED }}>{label}</span>
