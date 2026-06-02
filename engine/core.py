@@ -1416,8 +1416,9 @@ def compute_fragility_index(returns, constraint_kwargs, mc_kwargs,
        with empirical estimation uncertainty.
 
     3. Thresholds recalibrated for the new normalization:
-       - Old: Robust < 0.25, Moderate < 0.55, Fragile >= 0.55
-       - New: Robust < 0.15, Moderate < 0.35, Fragile >= 0.35
+       - v1: Robust < 0.25, Moderate < 0.55, Fragile >= 0.55
+       - v2: Robust < 0.15, Moderate < 0.35, Fragile >= 0.35  (too tight)
+       - v3: Robust < 0.25, Moderate < 0.65, Fragile >= 0.65  (calibrated)
 
     A higher MFI means risk estimates are sensitive to small changes
     in the model parameters — the model is fragile.
@@ -1432,9 +1433,9 @@ def compute_fragility_index(returns, constraint_kwargs, mc_kwargs,
 
     Interpretation
     ──────────────
-        MFI < 0.15   Robust    — estimates stable across reasonable perturbations
-        MFI < 0.35   Moderate  — noticeable sensitivity to inputs
-        MFI ≥ 0.35   Fragile   — estimates shift substantially with small
+        MFI < 0.25   Robust    — estimates stable across reasonable perturbations
+        MFI < 0.65   Moderate  — noticeable sensitivity to model inputs
+        MFI ≥ 0.65   Fragile   — estimates shift substantially with small
                                   input changes; interpret with caution
 
     Reference: theoretical basis in Cont & Bouchaud (2000) model
@@ -1493,7 +1494,7 @@ def compute_fragility_index(returns, constraint_kwargs, mc_kwargs,
 
     avg_w = float(np.mean(list(details.values())))
     fi    = float(np.clip(avg_w / (base_dd_std + 1e-12), 0, 2))
-    grade = "Robust" if fi < 0.15 else ("Moderate" if fi < 0.35 else "Fragile")
+    grade = "Robust" if fi < 0.25 else ("Moderate" if fi < 0.65 else "Fragile")
     return fi, grade, details
 
 
