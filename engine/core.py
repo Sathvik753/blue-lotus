@@ -49,16 +49,8 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-try:
-    from hmmlearn.hmm import GaussianHMM
-    _HMM_AVAILABLE = True
-except ImportError:
-    _HMM_AVAILABLE = False
-    warnings.warn(
-        "hmmlearn is not installed. Falling back to rolling-volatility "
-        "regime detection. Install with: pip install hmmlearn",
-        ImportWarning, stacklevel=2,
-    )
+# hmmlearn removed — regime detection is now fully deterministic.
+# See RegimeModel below.
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -157,7 +149,7 @@ class RegimeModelOutput:
     transition_matrix: np.ndarray   # (3, 3) row-stochastic
     regime_means:      np.ndarray   # (3,) per-state mean return
     regime_stds:       np.ndarray   # (3,) per-state return std
-    regime_labels:     np.ndarray   # (T,) Viterbi-decoded state sequence
+    regime_labels:     np.ndarray   # (T,) state sequence (0=calm, 1=volatile, 2=crisis)
     stationary_dist:   np.ndarray   # (3,) long-run state probabilities
     log_likelihood:    float        # HMM log-likelihood on training data
     aic:               float        # Akaike Information Criterion
@@ -166,82 +158,75 @@ class RegimeModelOutput:
 
 class RegimeModel:
     """
-    3-state Hidden Markov Model for market regime detection.
+    Deterministic 3-state regime detector using rolling realized volatility.
 
-    States are ordered by emission variance (ascending):
-        0 = Calm     (low volatility, typical positive drift)
-        1 = Volatile (elevated volatility, reduced drift)
-        2 = Crisis   (high volatility, negative drift)
+    Replaces the HMM approach which produced uncalibrated crisis fractions
+    and required repeated manual tuning.  This approach is fully auditable:
+    every label can be explained by a simple rule.
 
-    Estimation: Baum-Welch Expectation-Maximization with n_init random
-    restarts. The model with the highest log-likelihood is retained.
+    States
+    ------
+        0 = Calm     (rolling vol < 70th percentile)
+        1 = Volatile (70th ≤ rolling vol < 90th percentile)
+        2 = Crisis   (rolling vol ≥ 90th percentile,
+                      sustained ≥ min_crisis_duration consecutive days,
+                      AND negative rolling return over the same window)
 
-    Decoding: Viterbi algorithm (MAP state sequence).
-
-    Fallback: if hmmlearn is unavailable or EM fails, the model reverts
-    to rolling-volatility percentile assignment.
+    The negative-return gate prevents high-vol bull-market rallies from
+    being mislabeled as crisis.
 
     Parameters
     ----------
-    n_components : int
-        Number of hidden states (default 3).
-    n_iter : int
-        Maximum EM iterations per restart (default 200).
-    n_init : int
-        Number of random restarts (default 10).
+    window : int
+        Rolling window for realized vol and return (default 20 trading days).
+    volatile_pct : float
+        Vol percentile threshold separating calm from volatile (default 70).
+    crisis_pct : float
+        Vol percentile threshold for crisis candidates (default 90).
+    min_crisis_duration : int
+        Minimum consecutive days required to call a run "crisis" (default 5).
     """
 
-    def __init__(self, n_components: int = 3, n_iter: int = 200, n_init: int = 10,
-                 min_crisis_duration: int = 3):
-        self.n_components       = n_components
-        self.n_iter             = n_iter
-        self.n_init             = n_init
+    def __init__(self, window: int = 20,
+                 volatile_pct: float = 70,
+                 crisis_pct: float = 90,
+                 min_crisis_duration: int = 5,
+                 # legacy kwargs silently ignored for backward compat
+                 **kwargs):
+        self.window              = window
+        self.volatile_pct        = volatile_pct
+        self.crisis_pct          = crisis_pct
         self.min_crisis_duration = min_crisis_duration
 
-    # ── Minimum-duration smoothing ────────────────────────────────────────────
+    # ── Persistence filter ────────────────────────────────────────────────────
 
     def _smooth_crisis(self, labels: np.ndarray) -> np.ndarray:
         """
-        Require at least `min_crisis_duration` consecutive days before a run
-        of state-2 observations is classified as "crisis".
-
-        Isolated spikes shorter than that threshold are reclassified as
-        state 1 (volatile), which prevents single noisy days from being
-        miscounted as crisis events.
-
-        This addresses the tendency of 3-state HMMs to overassign the
-        highest-variance state to isolated outlier observations.
+        Downgrade crisis runs shorter than min_crisis_duration to volatile.
         """
         if self.min_crisis_duration <= 1:
             return labels.copy()
-
         smoothed = labels.copy()
-        T = len(smoothed)
-        i = 0
+        T, i = len(smoothed), 0
         while i < T:
             if smoothed[i] == 2:
                 j = i
                 while j < T and smoothed[j] == 2:
                     j += 1
                 if (j - i) < self.min_crisis_duration:
-                    smoothed[i:j] = 1   # bump short crisis run to volatile
+                    smoothed[i:j] = 1
                 i = j
             else:
                 i += 1
         return smoothed
 
-    # ── Recompute stats from (possibly smoothed) labels ───────────────────────
+    # ── Transition matrix + stats from labels ─────────────────────────────────
 
     def _stats_from_labels(self, returns: np.ndarray,
                            labels: np.ndarray) -> tuple:
-        """
-        Recompute transition matrix, per-regime means/stds, and stationary
-        distribution from a label sequence.  Used after smoothing so that
-        all downstream parameters are consistent with the corrected labels.
-        """
-        T  = len(labels)
-        P  = np.ones((3, 3))          # Laplace smoothing
-        for t in range(T - 1):
+        """Compute transition matrix, emission means/stds, stationary dist."""
+        P = np.ones((3, 3))   # Laplace smoothing
+        for t in range(len(labels) - 1):
             P[labels[t], labels[t + 1]] += 1
         P /= P.sum(axis=1, keepdims=True)
 
@@ -253,31 +238,57 @@ class RegimeModel:
             np.std(returns[labels == k], ddof=1) if (labels == k).sum() > 1 else np.std(returns, ddof=1)
             for k in range(3)
         ])
-
         eigvals, eigvecs = np.linalg.eig(P.T)
         pi = np.abs(np.real(eigvecs[:, np.argmin(np.abs(eigvals - 1.0))]))
         pi /= pi.sum()
-
         return P, means, stds, pi
 
-    # ── Internal: rolling-vol fallback ───────────────────────────────────────
+    # ── Main fitting routine ─────────────────────────────────────────────────
 
-    def _rolling_vol_fit(self, returns):
-        T      = len(returns)
-        window = max(5, T // 10)
-        roll_vol = np.array([
-            np.std(returns[max(0, i - window): i + 1], ddof=0)
-            for i in range(T)
-        ])
-        cumulative = np.cumsum(returns)
-        drawdown   = cumulative - np.maximum.accumulate(cumulative)
+    def fit(self, returns: np.ndarray) -> "RegimeModelOutput":
+        n      = len(returns)
+        window = max(5, min(self.window, n // 10))
 
-        v33, v66 = np.percentile(roll_vol, 33), np.percentile(roll_vol, 66)
-        labels   = np.where(roll_vol <= v33, 0, np.where(roll_vol <= v66, 1, 2))
-        labels[drawdown < np.percentile(drawdown, 10)] = 2
+        # Step 1: rolling realized volatility (annualized)
+        sigma = np.full(n, np.nan)
+        for i in range(window, n):
+            sigma[i] = np.std(returns[i - window:i], ddof=1) * np.sqrt(252)
 
+        valid = ~np.isnan(sigma)
+
+        # Step 2: percentile thresholds from the data itself
+        vol_volatile = np.percentile(sigma[valid], self.volatile_pct)
+        vol_crisis   = np.percentile(sigma[valid], self.crisis_pct)
+
+        # Step 3: rolling return (same window) — crisis gate
+        roll_ret = np.full(n, np.nan)
+        for i in range(window, n):
+            roll_ret[i] = np.sum(returns[i - window:i])
+
+        # Step 4: raw label assignment
+        labels = np.zeros(n, dtype=int)
+        labels[sigma >= vol_volatile] = 1
+        labels[sigma >= vol_crisis]   = 2
+
+        # Step 5: negative-return gate — downgrade crisis with positive trend
+        labels[(labels == 2) & (roll_ret > 0)] = 1
+
+        # Step 6: persistence filter (min_crisis_duration consecutive days)
         labels = self._smooth_crisis(labels)
+
+        # Step 7: fill NaN prefix (first `window` days) with calm
+        labels[:window] = 0
+
+        # Step 8: compute transition matrix and emission stats
         P, means, stds, pi = self._stats_from_labels(returns, labels)
+
+        crisis_frac = float((labels == 2).mean())
+        if crisis_frac > 0.15:
+            logger.warning(
+                "Crisis regime fraction %.1f%% > 15%%. "
+                "Check data or increase crisis_pct / min_crisis_duration.",
+                crisis_frac * 100,
+            )
 
         return RegimeModelOutput(
             transition_matrix = P,
@@ -285,114 +296,9 @@ class RegimeModel:
             regime_stds       = stds,
             regime_labels     = labels,
             stationary_dist   = pi,
-            log_likelihood    = float("nan"),
+            log_likelihood    = float("nan"),   # not applicable for deterministic model
             aic               = float("nan"),
             bic               = float("nan"),
-        )
-
-    # ── Main fitting routine ─────────────────────────────────────────────────
-
-    def fit(self, returns):
-        if not _HMM_AVAILABLE:
-            logger.warning("hmmlearn unavailable — using rolling-vol fallback.")
-            return self._rolling_vol_fit(returns)
-
-        T = len(returns)
-        X = returns.reshape(-1, 1)
-
-        best_model = None
-        best_score = -np.inf
-
-        for seed in range(self.n_init):
-            try:
-                model = GaussianHMM(
-                    n_components    = self.n_components,
-                    covariance_type = "full",
-                    n_iter          = self.n_iter,
-                    random_state    = seed,
-                    tol             = 1e-5,
-                )
-                model.fit(X)
-                score = model.score(X)
-                if score > best_score:
-                    best_score = score
-                    best_model = model
-            except Exception:
-                pass
-
-        if best_model is None:
-            logger.warning("HMM fitting failed across all initializations — using rolling-vol fallback.")
-            return self._rolling_vol_fit(returns)
-
-        # Viterbi decoding
-        raw_labels = best_model.predict(X)
-
-        # Order states by risk-adjusted score: mean − 2×std  (descending)
-        #
-        # Ordering by variance alone assigns "crisis" to any high-vol state,
-        # including sustained-but-positive bull-market vol.  Using
-        # mean − 2×std ensures the crisis state has BOTH high variance AND
-        # negative expected return — the genuine financial definition.
-        #
-        #   Calm    → highest score  (positive drift, low vol)  → state 0
-        #   Volatile→ middle score   (near-zero drift, med vol) → state 1
-        #   Crisis  → lowest score   (negative drift, high vol) → state 2
-        raw_means = best_model.means_.flatten()
-        vols      = np.sqrt(best_model.covars_.flatten())
-        risk_score = raw_means - 2.0 * vols          # lower = more crisis-like
-        order = np.argsort(risk_score)[::-1]         # descending: calm first, crisis last
-        remap = {int(order[i]): i for i in range(self.n_components)}
-        labels = np.array([remap[s] for s in raw_labels], dtype=int)
-
-        # Re-order parameters to match calm=0, volatile=1, crisis=2
-        P = best_model.transmat_[np.ix_(order, order)]
-        regime_means = raw_means[order]
-        regime_stds  = vols[order]
-
-        # Stationary distribution via dominant left eigenvector
-        eigvals, eigvecs = np.linalg.eig(P.T)
-        pi = np.abs(np.real(eigvecs[:, np.argmin(np.abs(eigvals - 1.0))]))
-        pi /= pi.sum()
-
-        # Model fit quality
-        log_lik = float(best_score * T)
-        # Free parameters: initial state (k-1) + transition (k*(k-1)) + emission mean (k) + variance (k)
-        n_params = (self.n_components - 1 +
-                    self.n_components * (self.n_components - 1) +
-                    self.n_components * 2)
-        aic = float(2 * n_params - 2 * log_lik)
-        bic = float(n_params * np.log(T) - 2 * log_lik)
-
-        # Sanity check: reject degenerate solutions (any state nearly empty)
-        min_frac = min((labels == k).mean() for k in range(self.n_components))
-        if min_frac < 0.02:
-            logger.warning("HMM produced a degenerate state (< 2%% of observations) — using rolling-vol fallback.")
-            return self._rolling_vol_fit(returns)
-
-        # Apply minimum-duration filter to prevent isolated vol spikes from
-        # being classified as crisis.  Recompute transition matrix and
-        # emission stats from the smoothed labels so all parameters are
-        # consistent with the corrected state sequence.
-        labels = self._smooth_crisis(labels)
-        P, regime_means, regime_stds, pi = self._stats_from_labels(returns, labels)
-
-        crisis_frac = float((labels == 2).mean())
-        if crisis_frac > 0.15:
-            logger.warning(
-                "Crisis regime fraction %.1f%% > 15%% after smoothing. "
-                "Consider increasing min_crisis_duration or checking data quality.",
-                crisis_frac * 100,
-            )
-
-        return RegimeModelOutput(
-            transition_matrix = P,
-            regime_means      = regime_means,
-            regime_stds       = regime_stds,
-            regime_labels     = labels,
-            stationary_dist   = pi,
-            log_likelihood    = log_lik,
-            aic               = aic,
-            bic               = bic,
         )
 
 
@@ -728,10 +634,19 @@ class StructuralConstraintLayer:
                  moderate_dd: float = -0.05, severe_dd: float = -0.15,
                  implied_vol: Optional[float] = None,
                  known_risk_limit: Optional[float] = None,
-                 min_crisis_duration: int = 3,
+                 # regime params
+                 window: int = 20,
+                 volatile_pct: float = 70,
+                 crisis_pct: float = 90,
+                 min_crisis_duration: int = 5,
                  # legacy kwargs accepted but ignored
                  **kwargs):
-        self.regime_model = RegimeModel(min_crisis_duration=min_crisis_duration)
+        self.regime_model = RegimeModel(
+            window=window,
+            volatile_pct=volatile_pct,
+            crisis_pct=crisis_pct,
+            min_crisis_duration=min_crisis_duration,
+        )
         self.tail_layer   = TailConstraintLayer(alpha=tail_alpha)
         self.bayes_layer  = BayesianShrinkageLayer(alpha_ig=alpha_ig, beta_ig=beta_ig)
         self.dd_layer     = DrawdownConditioningLayer(
@@ -1820,12 +1735,12 @@ def print_executive_summary(mc, sm, meta, strategy_name, fi=None, fi_grade=None,
     print(f"║  Esscher: {lam_str:<56}║")
 
     # HMM quality
-    if regime_output is not None and not np.isnan(regime_output.log_likelihood):
+    if regime_output is not None:
         print("╠" + "═" * 66 + "╣")
-        print(f"║  HMM FIT  log-lik={regime_output.log_likelihood:.1f}  "
-              f"AIC={regime_output.aic:.1f}  BIC={regime_output.bic:.1f}{'':>10}║")
         pi = regime_output.stationary_dist
-        print(f"║  Regime dist — Calm={pi[0]:.2f}  Volatile={pi[1]:.2f}  Crisis={pi[2]:.2f}{'':>14}║")
+        crisis_frac = float((regime_output.regime_labels == 2).mean())
+        print(f"║  REGIME  Calm={pi[0]:.2f}  Volatile={pi[1]:.2f}  Crisis={pi[2]:.2f}  "
+              f"(actual {crisis_frac:.1%}){'':>5}║")
 
     print("╠" + "═" * 66 + "╣")
     print(f"║  DRAWDOWN                                                      ║")
@@ -1930,13 +1845,13 @@ class BlueLotusEngine:
         print(f"   n={meta.n_observations}  mean={meta.raw_mean:.6f}  "
               f"std={meta.raw_std:.6f}  ann_vol={meta.ann_vol:.2%}")
 
-        print("▶ Module 2: Structural Constraints (HMM + GPD)...")
+        print("▶ Module 2: Structural Constraints (vol-regime + GPD)...")
         constraints = self.cl.fit(cleaned)
-        pi   = constraints.regime.stationary_dist
-        tail = constraints.tail
-        print(f"   HMM  log-lik={constraints.regime.log_likelihood:.1f}  "
-              f"AIC={constraints.regime.aic:.1f}  BIC={constraints.regime.bic:.1f}")
+        pi     = constraints.regime.stationary_dist
+        tail   = constraints.tail
+        labels = constraints.regime.regime_labels
         print(f"   Regime dist — Calm={pi[0]:.2f}  Volatile={pi[1]:.2f}  Crisis={pi[2]:.2f}")
+        print(f"   Crisis fraction (actual): {(labels==2).mean():.1%}")
         print(f"   Tail method: {tail.method}  "
               f"xi={tail.xi:.4f}  β={tail.beta:.6f}  n_tail={tail.n_tail}")
         print(f"   ES target: {_pct(tail.es_target)}")
