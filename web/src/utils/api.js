@@ -1,12 +1,5 @@
-// Base URL is injected at build time via REACT_APP_API_BASE.
-// Set it in .env.local for local dev (pointing at your local server)
-// or in your cloud build environment for production.
-// Example .env.local:
-//   REACT_APP_API_BASE=http://localhost:8000
 const BASE = process.env.REACT_APP_API_BASE || "";
 
-// Export so other components (e.g. Results export link) can reference it
-// without duplicating the URL.
 export const API_BASE = BASE;
 
 function getToken() {
@@ -45,9 +38,9 @@ async function request(method, path, body = null) {
 }
 
 export const api = {
-  get:    (path)        => request("GET",    path),
-  post:   (path, body)  => request("POST",   path, body),
-  delete: (path)        => request("DELETE", path),
+  get: (path) => request("GET", path),
+  post: (path, body) => request("POST", path, body),
+  delete: (path) => request("DELETE", path),
 
   async login(email, password) {
     const form = new URLSearchParams({ username: email, password });

@@ -6,10 +6,10 @@ import {
 } from "lucide-react";
 
 const NAV = [
-  { to: "/run",     icon: Zap,       label: "New Run"   },
-  { to: "/history", icon: Clock,     label: "History"   },
-  { to: "/compare", icon: BarChart2, label: "Compare"   },
-  { to: "/keys",    icon: Key,       label: "API Keys"  },
+  { to: "/run", icon: Zap, label: "New Run" },
+  { to: "/history", icon: Clock, label: "History" },
+  { to: "/compare", icon: BarChart2, label: "Compare" },
+  { to: "/keys", icon: Key, label: "API Keys" },
 ];
 
 export default function Layout() {
@@ -23,13 +23,11 @@ export default function Layout() {
 
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
-      {/* Sidebar */}
       <aside style={{
         width: 220, background: "var(--dark)", borderRight: "1px solid var(--border)",
         display: "flex", flexDirection: "column", padding: "24px 0", flexShrink: 0,
         position: "fixed", top: 0, left: 0, height: "100vh",
       }}>
-        {/* Logo */}
         <div style={{ padding: "0 20px 32px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
             <Activity size={20} color="var(--gold)" />
@@ -45,7 +43,6 @@ export default function Layout() {
           </div>
         </div>
 
-        {/* Nav links */}
         <nav style={{ flex: 1, padding: "0 12px" }}>
           {NAV.map(({ to, icon: Icon, label }) => (
             <NavLink key={to} to={to} style={({ isActive }) => ({
@@ -62,7 +59,6 @@ export default function Layout() {
           ))}
         </nav>
 
-        {/* User + logout */}
         <div style={{ padding: "16px 20px", borderTop: "1px solid var(--border)" }}>
           <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 4, letterSpacing: "0.06em" }}>
             {user?.email}
@@ -84,7 +80,6 @@ export default function Layout() {
         </div>
       </aside>
 
-      {/* Main content */}
       <main style={{ marginLeft: 220, flex: 1, padding: "40px", minHeight: "100vh" }}>
         <Outlet />
       </main>

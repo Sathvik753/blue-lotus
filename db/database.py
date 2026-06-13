@@ -1,14 +1,10 @@
-"""
-Database — connection, session, and init
-Blue Lotus Labs
-"""
+"""Async database connection, session factory, and table init."""
 
 import os
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.pool import NullPool
 from db.models import Base
 
-# Read from environment — set in Railway/Render dashboard
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
     "postgresql+asyncpg://postgres:password@localhost:5432/bluelotus"
@@ -17,7 +13,7 @@ DATABASE_URL = os.getenv(
 engine = create_async_engine(
     DATABASE_URL,
     echo=False,
-    poolclass=NullPool,   # safe for serverless / Railway
+    poolclass=NullPool,
 )
 
 AsyncSessionLocal = async_sessionmaker(

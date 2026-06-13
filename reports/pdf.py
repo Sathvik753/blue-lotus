@@ -1,8 +1,4 @@
-"""
-PDF Report Generator — Blue Lotus Labs
-Produces a branded, client-ready risk report from a completed run result.
-Uses reportlab (pip install reportlab).
-"""
+"""PDF report generator for Blue Lotus Labs run results (requires reportlab)."""
 
 import io
 from datetime import datetime
@@ -18,17 +14,15 @@ from reportlab.platypus import (
 )
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 
-# ── Brand colors ─────────────────────────────────────────────────
-BL_NAVY  = colors.HexColor("#0D1B2A")
-BL_BLUE  = colors.HexColor("#1B4F72")
-BL_TEAL  = colors.HexColor("#148F77")
-BL_GOLD  = colors.HexColor("#D4AC0D")
-BL_ROSE  = colors.HexColor("#C0392B")
+BL_NAVY = colors.HexColor("#0D1B2A")
+BL_BLUE = colors.HexColor("#1B4F72")
+BL_TEAL = colors.HexColor("#148F77")
+BL_GOLD = colors.HexColor("#D4AC0D")
+BL_ROSE = colors.HexColor("#C0392B")
 BL_LIGHT = colors.HexColor("#EAF2FF")
-BL_GREY  = colors.HexColor("#5D6D7E")
-WHITE    = colors.white
-BLACK    = colors.black
-
+BL_GREY = colors.HexColor("#5D6D7E")
+WHITE = colors.white
+BLACK = colors.black
 
 def _styles():
     base = getSampleStyleSheet()
@@ -53,11 +47,10 @@ def _styles():
                                        fontSize=16, textColor=BL_NAVY),
     }
 
-
 def _metric_table(rows: list) -> Table:
     """Render a 2-column metrics table."""
     style = _styles()
-    data  = []
+    data = []
     for label, value, note in rows:
         data.append([
             Paragraph(label, style["metric_label"]),
@@ -76,7 +69,6 @@ def _metric_table(rows: list) -> Table:
     ]))
     return t
 
-
 def generate_pdf(result: dict, strategy_name: str,
                  ticker: Optional[str] = None,
                  run_id: Optional[str] = None) -> bytes:
@@ -94,16 +86,15 @@ def generate_pdf(result: dict, strategy_name: str,
     -------
     PDF bytes — write to file or stream to client
     """
-    buf    = io.BytesIO()
-    doc    = SimpleDocTemplate(buf, pagesize=A4,
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=A4,
                                topMargin=1.5*cm, bottomMargin=2*cm,
                                leftMargin=2*cm, rightMargin=2*cm)
-    style  = _styles()
-    story  = []
+    style = _styles()
+    story = []
 
     generated = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
 
-    # ── Header banner ─────────────────────────────────────────────
     header_data = [[
         Paragraph("BLUE LOTUS LABS", style["title"]),
     ]]
@@ -123,11 +114,10 @@ def generate_pdf(result: dict, strategy_name: str,
                             style["small"]))
     story.append(HRFlowable(width="100%", thickness=1, color=BL_GOLD, spaceAfter=10))
 
-    # ── Data & Simulation ─────────────────────────────────────────
     story.append(Paragraph("1. Data & Simulation Summary", style["section"]))
     meta = result.get("metadata", {})
-    sim  = result.get("simulation", {})
-    sc   = sim.get("scenario_counts", {})
+    sim = result.get("simulation", {})
+    sc = sim.get("scenario_counts", {})
     story.append(_metric_table([
         ("Observations",    meta.get("n_observations", "—"),    "Number of daily returns used"),
         ("Raw Mean Return", f"{meta.get('raw_mean', 0):.6f}",   "Daily mean before processing"),
@@ -140,9 +130,8 @@ def generate_pdf(result: dict, strategy_name: str,
         ("Crisis Paths",    f"{sc.get('crisis', 0):,}",         "Severe drawdown paths"),
     ]))
 
-    # ── Regime Analysis ───────────────────────────────────────────
     story.append(Paragraph("2. Regime Analysis", style["section"]))
-    reg  = result.get("regime", {})
+    reg = result.get("regime", {})
     dist = reg.get("stationary_dist", {})
     story.append(_metric_table([
         ("Calm Regime",     f"{dist.get('calm', 0):.1%}",     "Long-run fraction in calm state"),
@@ -150,7 +139,6 @@ def generate_pdf(result: dict, strategy_name: str,
         ("Crisis Regime",   f"{dist.get('crisis', 0):.1%}",  "Long-run fraction in crisis state"),
     ]))
 
-    # ── Drawdown ──────────────────────────────────────────────────
     story.append(Paragraph("3. Maximum Drawdown", style["section"]))
     dd = result.get("drawdown", {})
     story.append(_metric_table([
@@ -161,7 +149,6 @@ def generate_pdf(result: dict, strategy_name: str,
         ("90% CI Upper",        f"{dd.get('ci_90_high', 0):.6f}", "Confidence interval upper bound"),
     ]))
 
-    # ── Expected Shortfall ────────────────────────────────────────
     story.append(Paragraph("4. Expected Shortfall (CVaR)", style["section"]))
     es = result.get("expected_shortfall", {})
     story.append(_metric_table([
@@ -172,7 +159,6 @@ def generate_pdf(result: dict, strategy_name: str,
         ("90% CI Upper",     f"{es.get('ci_90_high', 0):.6f}",      "Confidence interval upper bound"),
     ]))
 
-    # ── Recovery ─────────────────────────────────────────────────
     story.append(Paragraph("5. Time-to-Recovery", style["section"]))
     rec = result.get("recovery", {})
     story.append(_metric_table([
@@ -184,7 +170,6 @@ def generate_pdf(result: dict, strategy_name: str,
                             f"Paths that never recover within {sim.get('horizon', 252)}-day horizon"),
     ]))
 
-    # ── Fragility ─────────────────────────────────────────────────
     frag = result.get("fragility", {})
     if frag.get("index") is not None:
         story.append(Paragraph("6. Model Fragility Index™", style["section"]))
@@ -200,7 +185,6 @@ def generate_pdf(result: dict, strategy_name: str,
             ("Fragility Grade", frag.get("grade", "—"),         "Robust / Moderate / Fragile"),
         ]))
 
-    # ── Disclaimer ────────────────────────────────────────────────
     story.append(Spacer(1, 0.5*cm))
     story.append(HRFlowable(width="100%", thickness=0.5, color=BL_GREY))
     story.append(Spacer(1, 0.2*cm))

@@ -38,13 +38,13 @@ export default function Compare() {
   }
 
   const COLS = [
-    { key: "ticker",            label: "Ticker"      },
-    { key: "n_observations",    label: "N Obs"       },
-    { key: "ann_vol",           label: "Ann Vol",    fmt: v => v != null ? (v * 100).toFixed(2) + "%" : "—" },
-    { key: "dd_mean",           label: "Mean DD",    fmt: v => v?.toFixed(4) },
-    { key: "es_aggregate",      label: "ES (5%)",    fmt: v => v?.toFixed(4) },
-    { key: "pct_never_recover", label: "No Recovery",fmt: v => v != null ? (v * 100).toFixed(1) + "%" : "—" },
-    { key: "recovery_median",   label: "Med Recovery",fmt: v => v != null ? v.toFixed(0) + "d" : "—" },
+    { key: "ticker", label: "Ticker" },
+    { key: "n_observations", label: "N Obs" },
+    { key: "ann_vol", label: "Ann Vol", fmt: v => v != null ? (v * 100).toFixed(2) + "%" : "—" },
+    { key: "dd_mean", label: "Mean DD", fmt: v => v?.toFixed(4) },
+    { key: "es_aggregate", label: "ES (5%)", fmt: v => v?.toFixed(4) },
+    { key: "pct_never_recover", label: "No Recovery", fmt: v => v != null ? (v * 100).toFixed(1) + "%" : "—" },
+    { key: "recovery_median", label: "Med Recovery", fmt: v => v != null ? v.toFixed(0) + "d" : "—" },
   ];
 
   return (

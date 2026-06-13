@@ -10,13 +10,12 @@ import {
   AlertTriangle, CheckCircle, XCircle, ChevronDown, ChevronUp,
 } from "lucide-react";
 
-const GOLD  = "#D4AC0D";
-const TEAL  = "#148F77";
-const ROSE  = "#C0392B";
-const BLUE  = "#1B4F72";
+const GOLD = "#D4AC0D";
+const TEAL = "#148F77";
+const ROSE = "#C0392B";
+const BLUE = "#1B4F72";
 const MUTED = "#5D7A99";
 
-// ── Helpers ───────────────────────────────────────────────────────
 
 const pct = (v, d = 2) =>
   v == null || isNaN(v) ? "—" : `${(v * 100).toFixed(d)}%`;
@@ -40,7 +39,6 @@ function CiBadge({ lo, hi, isDay = false }) {
   );
 }
 
-// ── Collapsible section ───────────────────────────────────────────
 
 function Collapsible({ title, children, defaultOpen = false }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -62,7 +60,6 @@ function Collapsible({ title, children, defaultOpen = false }) {
   );
 }
 
-// ── Chart tooltip ─────────────────────────────────────────────────
 
 function ChartTooltip({ active, payload, label, isPercent }) {
   if (!active || !payload?.length) return null;
@@ -81,7 +78,6 @@ function ChartTooltip({ active, payload, label, isPercent }) {
   );
 }
 
-// ── Histogram ─────────────────────────────────────────────────────
 
 function HistChart({ data, color, refLines = [], title, subtitle, isPercent = false }) {
   if (!data?.length) return <div style={{ color: MUTED, fontSize: 12 }}>No data</div>;
@@ -113,7 +109,6 @@ function HistChart({ data, color, refLines = [], title, subtitle, isPercent = fa
   );
 }
 
-// ── Stat row ──────────────────────────────────────────────────────
 
 function StatRow({ label, value, description, ci }) {
   return (
@@ -126,7 +121,6 @@ function StatRow({ label, value, description, ci }) {
   );
 }
 
-// ── Section header ────────────────────────────────────────────────
 
 function SectionHeader({ title, description }) {
   return (
@@ -137,7 +131,6 @@ function SectionHeader({ title, description }) {
   );
 }
 
-// ── Wasserstein bar chart ─────────────────────────────────────────
 
 function WassersteinRow({ name, value, max }) {
   const labels = {
@@ -163,7 +156,6 @@ function WassersteinRow({ name, value, max }) {
   );
 }
 
-// ── Backtest row ──────────────────────────────────────────────────
 
 function BacktestRow({ br }) {
   const covered = br.dd_covered;
@@ -203,14 +195,13 @@ function BacktestRow({ br }) {
   );
 }
 
-// ── Main component ────────────────────────────────────────────────
 
 export default function Results() {
   const { runId }  = useParams();
-  const navigate   = useNavigate();
-  const [data, setData]           = useState(null);
-  const [loading, setLoading]     = useState(true);
-  const [error, setError]         = useState("");
+  const navigate = useNavigate();
+ const [data, setData] = useState(null);
+ const [loading, setLoading] = useState(true);
+ const [error, setError] = useState("");
   const [exporting, setExporting] = useState(false);
 
   async function handleExport() {
@@ -220,10 +211,10 @@ export default function Results() {
       const res = await api.get(`/run/${runId}`);
       const json = JSON.stringify(res.data, null, 2);
       const blob = new Blob([json], { type: "application/json" });
-      const url  = URL.createObjectURL(blob);
-      const a    = document.createElement("a");
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
       const name = (data.strategy_name || data.ticker || "run").replace(/\s+/g, "_");
-      a.href     = url;
+      a.href = url;
       a.download = `bluelotus_${name}_${runId.slice(0, 8)}.json`;
       a.click();
       URL.revokeObjectURL(url);
@@ -262,32 +253,32 @@ export default function Results() {
     </div>
   );
 
-  const r         = data.result;
-  const dd        = r.drawdown;
-  const es        = r.expected_shortfall;
-  const rec       = r.recovery;
-  const frag      = r.fragility;
-  const sim       = r.simulation;
-  const regime    = r.regime?.stationary_dist || {};
-  const hmm       = r.regime?.fit_quality || {};
-  const gpd       = r.tail_constraints?.gpd || {};
-  const tail      = r.tail_constraints || {};
-  const sc        = sim?.scenario_counts || {};
-  const backtest  = r.backtest || [];
-  const ddBci     = dd?.bootstrap_ci || {};
-  const esBci     = es?.bootstrap_ci || {};
-  const recBci    = rec?.bootstrap_ci || {};
+  const r = data.result;
+  const dd = r.drawdown;
+  const es = r.expected_shortfall;
+  const rec = r.recovery;
+  const frag = r.fragility;
+  const sim = r.simulation;
+  const regime = r.regime?.stationary_dist || {};
+  const hmm = r.regime?.fit_quality || {};
+  const gpd = r.tail_constraints?.gpd || {};
+  const tail = r.tail_constraints || {};
+  const sc = sim?.scenario_counts || {};
+  const backtest = r.backtest || [];
+  const ddBci = dd?.bootstrap_ci || {};
+  const esBci = es?.bootstrap_ci || {};
+  const recBci = rec?.bootstrap_ci || {};
 
-  const fragGrade  = frag?.grade || "—";
-  const fragColor  = fragGrade === "Robust" ? TEAL : fragGrade === "Moderate" ? GOLD : ROSE;
-  const fragDesc   = fragGrade === "Robust"
+  const fragGrade = frag?.grade || "—";
+  const fragColor = fragGrade === "Robust" ? TEAL : fragGrade === "Moderate" ? GOLD : ROSE;
+  const fragDesc = fragGrade === "Robust"
     ? "Estimates stay consistent when model inputs are nudged."
     : fragGrade === "Moderate"
     ? "Some sensitivity to input parameters."
     : "Risk estimates shift noticeably with small input changes. Interpret with caution.";
 
   const wassDetails = frag?.details || {};
-  const wassMax     = Object.values(wassDetails).length > 0
+  const wassMax = Object.values(wassDetails).length > 0
     ? Math.max(...Object.values(wassDetails).filter(v => v != null))
     : 0;
 

@@ -1,23 +1,4 @@
-"""
-FastAPI Application — Blue Lotus Labs
-REST API for the Stress-Testing Engine
-
-Endpoints:
-  POST /auth/register
-  POST /auth/login
-  GET  /auth/me
-  POST /auth/api-keys
-  GET  /auth/api-keys
-
-  POST /run/ticker          → async job
-  POST /run/custom          → async job
-  GET  /run/{run_id}        → job status + result
-  GET  /runs                → paginated run history
-
-  POST /compare             → multi-ticker comparison
-
-  GET  /health
-"""
+"""FastAPI application for the Blue Lotus Labs stress-testing engine."""
 
 import os
 import numpy as np
@@ -54,9 +35,6 @@ from api.schemas import (
 )
 from api.jobs import fetch_ticker_and_run, execute_run
 
-
-# ── App ──────────────────────────────────────────────────────────
-
 app = FastAPI(
     title="Blue Lotus Labs — Stress-Testing API",
     description="Constraint-driven Monte Carlo stress-testing for financial strategies.",
@@ -75,7 +53,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     logger.error(f"Unhandled exception on {request.method} {request.url.path}: {exc}", exc_info=True)
@@ -84,20 +61,13 @@ async def global_exception_handler(request: Request, exc: Exception):
         content={"detail": "Internal server error", "error": str(exc)},
     )
 
-
 @app.on_event("startup")
 async def startup():
     await init_db()
 
-
-# ── Health ────────────────────────────────────────────────────────
-
 @app.get("/health", tags=["System"])
 async def health():
     return {"status": "ok", "service": "Blue Lotus Labs API", "version": "1.0.0"}
-
-
-# ── Auth ──────────────────────────────────────────────────────────
 
 @app.post("/auth/register", response_model=TokenResponse, tags=["Auth"])
 async def register(req: RegisterRequest, db: AsyncSession = Depends(get_db)):
@@ -120,14 +90,13 @@ async def register(req: RegisterRequest, db: AsyncSession = Depends(get_db)):
         email=user.email, plan=user.plan,
     )
 
-
 @app.post("/auth/login", response_model=TokenResponse, tags=["Auth"])
 async def login(
     form: OAuth2PasswordRequestForm = Depends(),
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(select(User).where(User.email == form.username))
-    user   = result.scalar_one_or_none()
+    user = result.scalar_one_or_none()
     if not user or not verify_password(form.password, user.hashed_pw):
         raise HTTPException(status_code=401, detail="Invalid email or password.")
 
@@ -137,14 +106,12 @@ async def login(
         email=user.email, plan=user.plan,
     )
 
-
 @app.get("/auth/me", response_model=UserResponse, tags=["Auth"])
 async def me(user: User = Depends(get_current_user)):
     return UserResponse(
         id=user.id, email=user.email, name=user.name,
         plan=user.plan, created_at=user.created_at,
     )
-
 
 @app.post("/auth/api-keys", response_model=ApiKeyResponse, tags=["Auth"])
 async def create_api_key(
@@ -158,12 +125,11 @@ async def create_api_key(
     await db.commit()
     await db.refresh(key_obj)
     return ApiKeyResponse(
-        key=raw,               # only time plaintext is returned
+        key=raw,  # only time plaintext is returned
         key_id=key_obj.id,
         name=key_obj.name,
         created_at=key_obj.created_at,
     )
-
 
 @app.get("/auth/api-keys", tags=["Auth"])
 async def list_api_keys(
@@ -177,9 +143,6 @@ async def list_api_keys(
     return [{"key_id": k.id, "name": k.name,
              "last_used": k.last_used, "created_at": k.created_at}
             for k in keys]
-
-
-# ── Run: Ticker ───────────────────────────────────────────────────
 
 @app.post("/run/ticker", response_model=RunStatusResponse, tags=["Runs"])
 async def run_ticker(
@@ -205,10 +168,10 @@ async def run_ticker(
     await db.refresh(run)
 
     config = {
-        "n_paths":         req.n_paths,
-        "horizon":         req.horizon,
+        "n_paths": req.n_paths,
+        "horizon": req.horizon,
         "run_sensitivity": req.run_sensitivity,
-        "ticker":          req.ticker,
+        "ticker": req.ticker,
     }
 
     background_tasks.add_task(
@@ -220,9 +183,6 @@ async def run_ticker(
     return RunStatusResponse(
         run_id=run.id, status=run.status, created_at=run.created_at,
     )
-
-
-# ── Run: Custom Returns ───────────────────────────────────────────
 
 @app.post("/run/custom", response_model=RunStatusResponse, tags=["Runs"])
 async def run_custom(
@@ -248,11 +208,11 @@ async def run_custom(
     await db.refresh(run)
 
     returns = np.array(req.returns, dtype=float)
-    config  = {
-        "n_paths":         req.n_paths,
-        "horizon":         req.horizon,
+    config = {
+        "n_paths": req.n_paths,
+        "horizon": req.horizon,
         "run_sensitivity": req.run_sensitivity,
-        "strategy_name":   req.strategy_name,
+        "strategy_name": req.strategy_name,
     }
 
     background_tasks.add_task(execute_run, run_id=run.id, returns=returns, config=config)
@@ -260,9 +220,6 @@ async def run_custom(
     return RunStatusResponse(
         run_id=run.id, status=run.status, created_at=run.created_at,
     )
-
-
-# ── Run: Status + Result ──────────────────────────────────────────
 
 @app.get("/run/{run_id}", response_model=FullResultResponse, tags=["Runs"])
 async def get_run(
@@ -296,14 +253,11 @@ async def get_run(
         result=payload,
     )
 
-
-# ── Runs: History ─────────────────────────────────────────────────
-
 @app.get("/runs", response_model=PaginatedRuns, tags=["Runs"])
 async def list_runs(
-    page: int      = Query(1, ge=1),
+    page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
-    user: User     = Depends(get_current_user),
+    user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Paginated list of all runs for the current user."""
@@ -339,9 +293,6 @@ async def list_runs(
 
     return PaginatedRuns(runs=summaries, total=total, page=page, page_size=page_size)
 
-
-# ── Compare ───────────────────────────────────────────────────────
-
 @app.post("/compare", response_model=CompareResponse, tags=["Analysis"])
 async def compare(
     req: CompareRequest,
@@ -367,32 +318,31 @@ async def compare(
     rows = []
     for ticker in req.tickers:
         try:
-            t  = yf.Ticker(ticker)
+            t = yf.Ticker(ticker)
             df = t.history(start=req.start_date,
                            end=dt.date.today().strftime("%Y-%m-%d"),
                            auto_adjust=True)
             if df.empty:
                 continue
 
-            prices  = df["Close"].dropna().squeeze()
+            prices = df["Close"].dropna().squeeze()
             returns = prices.pct_change().dropna().to_numpy(dtype=float).flatten()
 
-            ip      = InputProcessor(winsorize=True, normalization="none")
+            ip = InputProcessor(winsorize=True, normalization="none")
             cleaned, meta = ip.fit_transform(returns)
 
-            daily_std   = float(cleaned.std())
+            daily_std = float(cleaned.std())
             cl = StructuralConstraintLayer(
                 moderate_dd=-daily_std * 15,
                 severe_dd=-daily_std * 45,
             )
             constraints = cl.fit(cleaned)
 
-            mc  = ConstrainedMonteCarloGenerator(n_paths=req.n_paths, horizon=req.horizon, random_seed=42)
+            mc = ConstrainedMonteCarloGenerator(n_paths=req.n_paths, horizon=req.horizon, random_seed=42)
             mc_out = mc.generate(constraints)
-            sm  = StressMetricsEngine()
+            sm = StressMetricsEngine()
             stress = sm.compute(mc_out)
 
-            # Save lightweight run record
             run = Run(
                 user_id=user.id, ticker=ticker,
                 strategy_name=f"{ticker} comparison",

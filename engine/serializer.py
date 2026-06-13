@@ -1,12 +1,7 @@
-"""
-Engine Serializer — Blue Lotus Labs v3.0
-Converts numpy/dataclass outputs to JSON-safe dicts.
-Includes new v3.0 fields: HMM quality, GPD parameters, bootstrap CIs, MFI details.
-"""
+"""Converts engine numpy/dataclass outputs into JSON-safe dicts."""
 
 import numpy as np
 from typing import Any, Optional, Dict
-
 
 def to_json(obj: Any) -> Any:
     """Recursively convert numpy types to JSON-serializable Python types."""
@@ -26,7 +21,6 @@ def to_json(obj: Any) -> Any:
         return None
     return obj
 
-
 def _safe(v, decimals=6):
     """Round a float, return None for NaN/Inf."""
     if v is None:
@@ -37,33 +31,20 @@ def _safe(v, decimals=6):
     except Exception:
         return None
 
-
 def _ci(t, decimals=6):
     """Serialize a (lo, hi) CI tuple."""
     if t is None:
         return {"lo": None, "hi": None}
     return {"lo": _safe(t[0], decimals), "hi": _safe(t[1], decimals)}
 
-
 def serialize_run_results(mc, sm, constraints, metadata, fi, fi_grade,
                            fi_details: Optional[Dict] = None,
                            ticker=None,
                            backtest_results=None) -> dict:
-    """
-    Convert a full v3.0 engine run into a clean JSON-safe dict.
-
-    New fields vs v2.0:
-    - metadata.ann_vol
-    - regime.log_likelihood / aic / bic
-    - tail.method / xi / beta / threshold / n_tail
-    - drawdown.*_ci90  (bootstrap confidence intervals)
-    - expected_shortfall.*_ci90
-    - recovery.mean_ci90
-    - fragility.details  (Wasserstein per perturbation)
-    """
-    dd    = sm.drawdown_dist
-    es    = sm.es_dist
-    rec   = sm.recovery_dist
+    """Convert a full engine run into a JSON-safe dict."""
+    dd = sm.drawdown_dist
+    es = sm.es_dist
+    rec = sm.recovery_dist
     valid_rec = rec[~np.isnan(rec)]
 
     labels = mc.scenario_labels
@@ -73,13 +54,12 @@ def serialize_run_results(mc, sm, constraints, metadata, fi, fi_grade,
         "crisis": int((labels == "crisis").sum()),
     }
 
-    pi   = constraints.regime.stationary_dist
+    pi = constraints.regime.stationary_dist
     tail = constraints.tail
 
     return {
         "ticker":   ticker,
 
-        # ── Data & simulation ─────────────────────────────────────────────
         "metadata": {
             "n_observations": int(metadata.n_observations),
             "raw_mean":       _safe(metadata.raw_mean),
@@ -99,7 +79,6 @@ def serialize_run_results(mc, sm, constraints, metadata, fi, fi_grade,
             "esscher_lam2":   _safe(mc.lam2, 6),
         },
 
-        # ── HMM regime ───────────────────────────────────────────────────
         "regime": {
             "stationary_dist": {
                 "calm":     _safe(pi[0], 4),
@@ -116,7 +95,6 @@ def serialize_run_results(mc, sm, constraints, metadata, fi, fi_grade,
             },
         },
 
-        # ── GPD tail ─────────────────────────────────────────────────────
         "tail_constraints": {
             "alpha":                float(tail.alpha),
             "method":               tail.method,
@@ -131,7 +109,6 @@ def serialize_run_results(mc, sm, constraints, metadata, fi, fi_grade,
             },
         },
 
-        # ── Drawdown ─────────────────────────────────────────────────────
         "drawdown": {
             "mean":       _safe(sm.dd_mean),
             "median":     _safe(sm.dd_median),
@@ -149,7 +126,6 @@ def serialize_run_results(mc, sm, constraints, metadata, fi, fi_grade,
             "histogram": _histogram(dd, bins=50),
         },
 
-        # ── Expected Shortfall ───────────────────────────────────────────
         "expected_shortfall": {
             "alpha":      float(sm.es_alpha),
             "aggregate":  _safe(sm.es_aggregate),
@@ -163,7 +139,6 @@ def serialize_run_results(mc, sm, constraints, metadata, fi, fi_grade,
             "histogram": _histogram(es, bins=50),
         },
 
-        # ── Recovery ─────────────────────────────────────────────────────
         "recovery": {
             "mean":          _safe(sm.recovery_mean, 2),
             "median":        _safe(sm.recovery_median, 2),
@@ -172,7 +147,6 @@ def serialize_run_results(mc, sm, constraints, metadata, fi, fi_grade,
             "histogram":     _histogram(valid_rec, bins=40) if len(valid_rec) > 0 else [],
         },
 
-        # ── Regime losses ─────────────────────────────────────────────────
         "regime_losses": {
             str(k): {
                 "mean":     _safe(sm.regime_means.get(k)),
@@ -182,21 +156,18 @@ def serialize_run_results(mc, sm, constraints, metadata, fi, fi_grade,
             for k in range(3)
         },
 
-        # ── Worst paths ──────────────────────────────────────────────────
         "worst_scenarios": {
             "k":             int(len(sm.worst_returns)),
             "total_returns": to_json(np.round(sm.worst_returns, 6)),
             "paths":         to_json(np.round(sm.worst_paths[:5], 6)),
         },
 
-        # ── Model Fragility Index (Wasserstein) ───────────────────────────
         "fragility": {
             "index":   _safe(fi, 6) if fi is not None else None,
             "grade":   fi_grade,
             "details": {k: _safe(v, 6) for k, v in (fi_details or {}).items()},
         },
 
-        # ── Historical backtest validation ────────────────────────────────
         "backtest": [
             {
                 "period_label":      br.period_label,
@@ -212,7 +183,6 @@ def serialize_run_results(mc, sm, constraints, metadata, fi, fi_grade,
             for br in (backtest_results or [])
         ],
     }
-
 
 def _histogram(arr: np.ndarray, bins: int = 50) -> list:
     """Return histogram as list of {x, y} points for frontend charting."""

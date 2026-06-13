@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { api } from "../utils/api";
 import { TrendingUp, AlignLeft, Upload, FileText, X, Play } from "lucide-react";
 
-// ── CSV parser ────────────────────────────────────────────────────
 
 function parseCSV(text) {
   const lines = text.trim().split(/\r?\n/);
@@ -27,7 +26,6 @@ function parseCSV(text) {
   return returns;
 }
 
-// ── Paste parser ──────────────────────────────────────────────────
 
 function parsePaste(text) {
   const tokens = text.trim().split(/[\s,]+/).filter(Boolean);
@@ -41,7 +39,6 @@ function parsePaste(text) {
   return returns;
 }
 
-// ── Shared sub-components ─────────────────────────────────────────
 
 function ErrorBox({ msg }) {
   if (!msg) return null;
@@ -63,7 +60,6 @@ function formatApiError(data) {
   return "Something went wrong.";
 }
 
-// ── Main component ────────────────────────────────────────────────
 
 const MODES = [
   { id: "ticker", label: "Yahoo Finance", icon: TrendingUp },
@@ -73,36 +69,35 @@ const MODES = [
 
 export default function NewRun() {
   const navigate = useNavigate();
-  const fileRef  = useRef();
+  const fileRef = useRef();
 
   const [mode, setMode] = useState("ticker");
 
   // Ticker mode
-  const [ticker,    setTicker]    = useState("");
+ const [ticker, setTicker] = useState("");
   const [startDate, setStartDate] = useState("2010-01-01");
 
   // Paste mode
-  const [pasteText,    setPasteText]    = useState("");
+ const [pasteText, setPasteText] = useState("");
   const [pasteReturns, setPasteReturns] = useState(null);
-  const [pasteError,   setPasteError]   = useState("");
+ const [pasteError, setPasteError] = useState("");
 
   // CSV mode
-  const [fileName,   setFileName]   = useState("");
+ const [fileName, setFileName] = useState("");
   const [csvReturns, setCsvReturns] = useState(null);
   const [parseError, setParseError] = useState("");
-  const [dragging,   setDragging]   = useState(false);
+ const [dragging, setDragging] = useState(false);
 
   // Shared params
   const [strategyName, setStrategyName] = useState("");
-  const [nPaths,       setNPaths]       = useState("1000");
-  const [horizon,      setHorizon]      = useState("252");
+ const [nPaths, setNPaths] = useState("1000");
+ const [horizon, setHorizon] = useState("252");
 
   // Run state
   const [running, setRunning] = useState(false);
-  const [status,  setStatus]  = useState("");
-  const [error,   setError]   = useState("");
+ const [status, setStatus] = useState("");
+ const [error, setError] = useState("");
 
-  // ── Paste handling ──────────────────────────────────────────────
 
   function onPasteChange(text) {
     setPasteText(text);
@@ -116,7 +111,6 @@ export default function NewRun() {
     }
   }
 
-  // ── CSV handling ────────────────────────────────────────────────
 
   function handleFile(file) {
     if (!file) return;
@@ -153,7 +147,6 @@ export default function NewRun() {
     setParseError("");
   }
 
-  // ── Submit ──────────────────────────────────────────────────────
 
   async function submit(e) {
     e.preventDefault();
@@ -166,19 +159,19 @@ export default function NewRun() {
 
       if (mode === "ticker") {
         res = await api.post("/run/ticker", {
-          ticker:        ticker.trim().toUpperCase(),
-          start_date:    startDate,
+          ticker: ticker.trim().toUpperCase(),
+          start_date: startDate,
           strategy_name: strategyName.trim() || undefined,
-          n_paths:       parseInt(nPaths, 10)  || 1000,
-          horizon:       parseInt(horizon, 10) || 252,
+          n_paths: parseInt(nPaths, 10)  || 1000,
+          horizon: parseInt(horizon, 10) || 252,
         });
       } else {
         const returns = mode === "csv" ? csvReturns : pasteReturns;
         res = await api.post("/run/custom", {
           returns,
           strategy_name: strategyName.trim() || "Custom",
-          n_paths:       parseInt(nPaths, 10)  || 1000,
-          horizon:       parseInt(horizon, 10) || 252,
+          n_paths: parseInt(nPaths, 10)  || 1000,
+          horizon: parseInt(horizon, 10) || 252,
         });
       }
 
@@ -211,7 +204,6 @@ export default function NewRun() {
     (mode === "csv"    && csvReturns   !== null)
   );
 
-  // ── Render ──────────────────────────────────────────────────────
 
   return (
     <div className="fade-in">

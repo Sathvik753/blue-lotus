@@ -123,7 +123,7 @@ export default function ApiKeys() {
 {`import requests, time
 
 API_KEY = "bl_your_key_here"
-BASE    = "https://blue-lotus-production.up.railway.app"
+BASE = "https://blue-lotus-production.up.railway.app"
 
 # Submit a stress test
 r = requests.post(f"{BASE}/run/custom",

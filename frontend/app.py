@@ -18,19 +18,17 @@ import time
 import io
 import os
 
-# ── Config ───────────────────────────────────────────────────────
 API_URL = os.getenv("API_URL", "http://localhost:8000")
 
-BL_DARK  = "#0D1B2A"
-BL_NAVY  = "#0D1B2A"
-BL_NAVY  = "#0D1B2A"
-BL_BLUE  = "#1B4F72"
-BL_TEAL  = "#148F77"
-BL_GOLD  = "#D4AC0D"
-BL_ROSE  = "#C0392B"
+BL_DARK = "#0D1B2A"
+BL_NAVY = "#0D1B2A"
+BL_NAVY = "#0D1B2A"
+BL_BLUE = "#1B4F72"
+BL_TEAL = "#148F77"
+BL_GOLD = "#D4AC0D"
+BL_ROSE = "#C0392B"
 BL_LIGHT = "#EAF2FF"
 
-# ── Page config ───────────────────────────────────────────────────
 st.set_page_config(
     page_title="Blue Lotus Labs",
     page_icon="🌸",
@@ -55,9 +53,9 @@ st.markdown(f"""
         border-radius: 20px; font-size: 0.8rem; font-weight: bold;
     }}
     .badge-completed {{ background: {BL_TEAL}; color: white; }}
-    .badge-running   {{ background: {BL_GOLD}; color: black; }}
-    .badge-failed    {{ background: {BL_ROSE}; color: white; }}
-    .badge-pending   {{ background: #555; color: white; }}
+    .badge-running {{ background: {BL_GOLD}; color: black; }}
+    .badge-failed {{ background: {BL_ROSE}; color: white; }}
+    .badge-pending {{ background: #555; color: white; }}
     div[data-testid="metric-container"] {{
         background: #111E2D; border: 1px solid #2E4057;
         border-radius: 8px; padding: 0.5rem;
@@ -73,14 +71,12 @@ st.markdown(f"""
 
 
 
-# ── Session state ─────────────────────────────────────────────────
 if "token" not in st.session_state:
     st.session_state.token = None
 if "user" not in st.session_state:
     st.session_state.user = None
 
 
-# ── API helpers ───────────────────────────────────────────────────
 def api(method, path, **kwargs):
     headers = kwargs.pop("headers", {})
     if st.session_state.token:
@@ -113,7 +109,6 @@ def poll_run(run_id, placeholder, max_wait=120):
     return None
 
 
-# ── Auth pages ────────────────────────────────────────────────────
 def page_login():
     st.markdown('<div class="main-header">'
                 '<h1 style="color:#D4AC0D;text-align:center;margin:0">🌸 Blue Lotus Labs</h1>'
@@ -124,39 +119,38 @@ def page_login():
 
     with tab_login:
         with st.form("login_form"):
-            email    = st.text_input("Email")
+            email = st.text_input("Email")
             password = st.text_input("Password", type="password")
-            submit   = st.form_submit_button("Login", use_container_width=True)
+            submit = st.form_submit_button("Login", use_container_width=True)
         if submit:
             r = api("post", "/auth/login",
                     data={"username": email, "password": password})
             if r and r.status_code == 200:
                 d = r.json()
                 st.session_state.token = d["access_token"]
-                st.session_state.user  = d
+                st.session_state.user = d
                 st.rerun()
             else:
                 st.error("Invalid credentials.")
 
     with tab_register:
         with st.form("register_form"):
-            name     = st.text_input("Name (optional)")
-            email    = st.text_input("Email")
+            name = st.text_input("Name (optional)")
+            email = st.text_input("Email")
             password = st.text_input("Password (min 8 chars)", type="password")
-            submit   = st.form_submit_button("Create Account", use_container_width=True)
+            submit = st.form_submit_button("Create Account", use_container_width=True)
         if submit:
             r = api("post", "/auth/register",
                     json={"email": email, "password": password, "name": name or None})
             if r and r.status_code == 200:
                 d = r.json()
                 st.session_state.token = d["access_token"]
-                st.session_state.user  = d
+                st.session_state.user = d
                 st.rerun()
             else:
                 st.error(r.json().get("detail", "Registration failed.") if r else "Error")
 
 
-# ── Main app ──────────────────────────────────────────────────────
 def sidebar():
     with st.sidebar:
         st.markdown(f'<h2 style="color:{BL_GOLD}">🌸 Blue Lotus Labs</h2>', unsafe_allow_html=True)
@@ -170,7 +164,7 @@ def sidebar():
         st.divider()
         if st.button("Logout", use_container_width=True):
             st.session_state.token = None
-            st.session_state.user  = None
+            st.session_state.user = None
             st.rerun()
     return page
 
@@ -184,15 +178,15 @@ def page_new_run():
     col1, col2 = st.columns([2, 1])
     with col2:
         st.markdown("**Simulation settings**")
-        n_paths  = st.select_slider("Paths", [1000, 2000, 5000, 10000, 50000], value=10000)
-        horizon  = st.slider("Horizon (days)", 21, 504, 252)
+        n_paths = st.select_slider("Paths", [1000, 2000, 5000, 10000, 50000], value=10000)
+        horizon = st.slider("Horizon (days)", 21, 504, 252)
         run_sens = st.checkbox("Fragility Index", value=True)
 
     with col1:
         if mode == "Ticker (Yahoo Finance)":
-            ticker     = st.text_input("Ticker symbol", placeholder="SPY, QQQ, BTC-USD...")
+            ticker = st.text_input("Ticker symbol", placeholder="SPY, QQQ, BTC-USD...")
             start_date = st.date_input("From", value=pd.Timestamp("2010-01-01"))
-            name       = st.text_input("Strategy name (optional)")
+            name = st.text_input("Strategy name (optional)")
 
             if st.button("▶ Run Stress Test", use_container_width=True, type="primary"):
                 if not ticker:
@@ -232,12 +226,12 @@ def page_new_run():
                 })
                 if r and r.status_code == 200:
                     run_id = r.json()["run_id"]
-                    data   = poll_run(run_id, placeholder)
+                    data = poll_run(run_id, placeholder)
                     if data and data.get("result"):
                         render_results(data)
 
-        else:  # Paste
-            raw  = st.text_area("Paste comma-separated decimal returns",
+        else: # Paste
+            raw = st.text_area("Paste comma-separated decimal returns",
                                 placeholder="0.012, -0.005, 0.003, ...")
             name = st.text_input("Strategy name", value="My Strategy")
             if st.button("▶ Run", use_container_width=True, type="primary"):
@@ -251,7 +245,7 @@ def page_new_run():
                     })
                     if r and r.status_code == 200:
                         run_id = r.json()["run_id"]
-                        data   = poll_run(run_id, placeholder)
+                        data = poll_run(run_id, placeholder)
                         if data and data.get("result"):
                             render_results(data)
                 except ValueError:
@@ -259,12 +253,12 @@ def page_new_run():
 
 
 def render_results(data: dict):
-    res    = data.get("result", {})
-    dd     = res.get("drawdown", {})
-    es     = res.get("expected_shortfall", {})
-    rec    = res.get("recovery", {})
-    frag   = res.get("fragility", {})
-    sim    = res.get("simulation", {})
+    res = data.get("result", {})
+    dd = res.get("drawdown", {})
+    es = res.get("expected_shortfall", {})
+    rec = res.get("recovery", {})
+    frag = res.get("fragility", {})
+    sim = res.get("simulation", {})
     regime = res.get("regime", {})
 
     st.success(f"✅ Completed in {data.get('duration_sec', 0):.1f}s")
@@ -299,8 +293,8 @@ def render_results(data: dict):
     r3.metric("Crisis",   f"{dist.get('crisis', 0):.1%}")
 
     # Histograms from payload
-    dd_hist  = dd.get("histogram", [])
-    es_hist  = es.get("histogram", [])
+    dd_hist = dd.get("histogram", [])
+    es_hist = es.get("histogram", [])
     rec_hist = rec.get("histogram", [])
 
     if dd_hist or es_hist:
@@ -461,7 +455,7 @@ def page_api_keys():
 import requests
 
 API_KEY = "bl_your_key_here"
-BASE    = "https://your-app.railway.app"
+BASE = "https://your-app.railway.app"
 
 # Run stress test on SPY
 r = requests.post(f"{BASE}/run/ticker",
@@ -485,7 +479,6 @@ print("ES (5%):",       result["expected_shortfall"]["aggregate"])
 """, language="python")
 
 
-# ── Router ────────────────────────────────────────────────────────
 def main():
     if not st.session_state.token:
         page_login()
