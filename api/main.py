@@ -7,7 +7,7 @@ from typing import Optional
 
 import logging
 from fastapi import Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 
 logger = logging.getLogger(__name__)
 
@@ -25,8 +25,9 @@ from db.database import get_db, init_db
 from db.models import User, ApiKey, Run, Result, RunStatus
 from api.auth import (
     hash_password, verify_password, create_access_token,
-    generate_api_key, hash_api_key, get_current_user,
+    generate_api_key, hash_api_key, get_current_user, get_default_user,
 )
+from reports.pdf import generate_pdf
 from api.schemas import (
     RegisterRequest, TokenResponse, ApiKeyResponse, UserResponse,
     TickerRunRequest, CustomRunRequest, CompareRequest,
@@ -107,7 +108,7 @@ async def login(
     )
 
 @app.get("/auth/me", response_model=UserResponse, tags=["Auth"])
-async def me(user: User = Depends(get_current_user)):
+async def me(user: User = Depends(get_default_user)):
     return UserResponse(
         id=user.id, email=user.email, name=user.name,
         plan=user.plan, created_at=user.created_at,
@@ -116,7 +117,7 @@ async def me(user: User = Depends(get_current_user)):
 @app.post("/auth/api-keys", response_model=ApiKeyResponse, tags=["Auth"])
 async def create_api_key(
     name: Optional[str] = None,
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_default_user),
     db: AsyncSession = Depends(get_db),
 ):
     raw, hashed = generate_api_key()
@@ -133,7 +134,7 @@ async def create_api_key(
 
 @app.get("/auth/api-keys", tags=["Auth"])
 async def list_api_keys(
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_default_user),
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
@@ -148,7 +149,7 @@ async def list_api_keys(
 async def run_ticker(
     req: TickerRunRequest,
     background_tasks: BackgroundTasks,
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_default_user),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -188,7 +189,7 @@ async def run_ticker(
 async def run_custom(
     req: CustomRunRequest,
     background_tasks: BackgroundTasks,
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_default_user),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -224,7 +225,7 @@ async def run_custom(
 @app.get("/run/{run_id}", response_model=FullResultResponse, tags=["Runs"])
 async def get_run(
     run_id: str,
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_default_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Poll for run status. When status='completed', result is included."""
@@ -253,11 +254,70 @@ async def get_run(
         result=payload,
     )
 
+async def _load_completed_run(run_id: str, user: User, db: AsyncSession) -> Run:
+    result = await db.execute(
+        select(Run)
+        .where(Run.id == run_id, Run.user_id == user.id)
+        .options(selectinload(Run.result))
+    )
+    run = result.scalar_one_or_none()
+    if run is None:
+        raise HTTPException(status_code=404, detail="Run not found.")
+    if run.status != RunStatus.completed or run.result is None:
+        raise HTTPException(status_code=409, detail="Run is not completed yet.")
+    return run
+
+def _slug(run: Run) -> str:
+    base = (run.strategy_name or run.ticker or "run").replace(" ", "_")
+    return "".join(c for c in base if c.isalnum() or c in "_-")[:40]
+
+@app.get("/run/{run_id}/export", tags=["Runs"])
+async def export_run_json(
+    run_id: str,
+    user: User = Depends(get_default_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Download the full result as a clean JSON file."""
+    run = await _load_completed_run(run_id, user, db)
+    body = {
+        "run_id": run.id,
+        "strategy_name": run.strategy_name,
+        "ticker": run.ticker,
+        "completed_at": run.completed_at.isoformat() if run.completed_at else None,
+        "result": run.result.payload,
+    }
+    filename = f"bluelotus_{_slug(run)}_{run.id[:8]}.json"
+    return JSONResponse(
+        content=body,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+@app.get("/run/{run_id}/pdf", tags=["Runs"])
+async def export_run_pdf(
+    run_id: str,
+    user: User = Depends(get_default_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Download a formatted PDF report of the run."""
+    run = await _load_completed_run(run_id, user, db)
+    pdf_bytes = generate_pdf(
+        result=run.result.payload,
+        strategy_name=run.strategy_name or run.ticker or "Strategy",
+        ticker=run.ticker,
+        run_id=run.id,
+    )
+    filename = f"bluelotus_{_slug(run)}_{run.id[:8]}.pdf"
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
 @app.get("/runs", response_model=PaginatedRuns, tags=["Runs"])
 async def list_runs(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_default_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Paginated list of all runs for the current user."""
@@ -296,7 +356,7 @@ async def list_runs(
 @app.post("/compare", response_model=CompareResponse, tags=["Analysis"])
 async def compare(
     req: CompareRequest,
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_default_user),
     db: AsyncSession = Depends(get_db),
 ):
     """

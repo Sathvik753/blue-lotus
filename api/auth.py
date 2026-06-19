@@ -16,7 +16,9 @@ from sqlalchemy import select
 from db.database import get_db
 from db.models import User, ApiKey
 
-SECRET_KEY = os.environ["SECRET_KEY"]  # raises KeyError at startup if unset — intentional
+# Set SECRET_KEY in production. Falls back to a dev key locally so the app boots
+# without configuration while login is disabled.
+SECRET_KEY = os.environ.get("SECRET_KEY", "dev-insecure-key-change-in-production")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours
 
@@ -102,3 +104,18 @@ async def get_current_user_optional(
         return await get_current_user(token, api_key, db)
     except HTTPException:
         return None
+
+DEFAULT_USER_EMAIL = "demo@bluelotus.local"
+
+async def get_default_user(db: AsyncSession = Depends(get_db)) -> User:
+    """Login is disabled for now: every request runs as a single shared
+    workspace user, created on first use. Swap back to get_current_user to
+    re-enable accounts."""
+    result = await db.execute(select(User).where(User.email == DEFAULT_USER_EMAIL))
+    user = result.scalar_one_or_none()
+    if user is None:
+        user = User(email=DEFAULT_USER_EMAIL, name="Workspace", hashed_pw="-", plan="pro")
+        db.add(user)
+        await db.commit()
+        await db.refresh(user)
+    return user

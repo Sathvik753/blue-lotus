@@ -208,9 +208,10 @@ export default function NewRun() {
   return (
     <div className="fade-in">
       <div className="accent-line" />
-      <h1 style={{ fontSize: 32, marginBottom: 8 }}>New Stress Test</h1>
-      <p style={{ color: "var(--muted)", marginBottom: 32 }}>
-        Run a Monte Carlo stress test on any return series.
+      <h1 style={{ fontSize: 34, marginBottom: 8 }} className="gradient-text">New Stress Test</h1>
+      <p style={{ color: "var(--muted)", marginBottom: 32, maxWidth: 560 }}>
+        Generate a forward-looking risk distribution for any return series — drawdowns,
+        tail losses, and recovery times across thousands of Monte Carlo scenarios.
       </p>
 
       <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 24 }}>

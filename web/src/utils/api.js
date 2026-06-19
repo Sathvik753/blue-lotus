@@ -2,32 +2,12 @@ const BASE = process.env.REACT_APP_API_BASE || "";
 
 export const API_BASE = BASE;
 
-function getToken() {
-  return localStorage.getItem("bl_token");
-}
-
-function getApiKey() {
-  return localStorage.getItem("bl_apikey");
-}
-
 async function request(method, path, body = null) {
-  const headers = { "Content-Type": "application/json" };
-  const token = getToken();
-  const apiKey = getApiKey();
-  if (token) headers["Authorization"] = `Bearer ${token}`;
-  if (apiKey) headers["X-API-Key"] = apiKey;
-
   const res = await fetch(`${BASE}${path}`, {
     method,
-    headers,
+    headers: { "Content-Type": "application/json" },
     body: body ? JSON.stringify(body) : null,
   });
-
-  if (res.status === 401) {
-    localStorage.removeItem("bl_token");
-    window.location.href = "/login";
-    return null;
-  }
 
   const text = await res.text();
   try {
@@ -37,48 +17,29 @@ async function request(method, path, body = null) {
   }
 }
 
+// Trigger a browser download from a binary endpoint (PDF, etc.).
+async function download(path, fallbackName) {
+  const res = await fetch(`${BASE}${path}`);
+  if (!res.ok) throw new Error(`Download failed (${res.status})`);
+  const blob = await res.blob();
+  const disp = res.headers.get("content-disposition") || "";
+  const match = disp.match(/filename="?([^"]+)"?/);
+  const name = match ? match[1] : fallbackName;
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 export const api = {
   get: (path) => request("GET", path),
   post: (path, body) => request("POST", path, body),
   delete: (path) => request("DELETE", path),
-
-  async login(email, password) {
-    const form = new URLSearchParams({ username: email, password });
-    const res = await fetch(`${BASE}/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: form,
-    });
-    const data = await res.json();
-    if (res.ok) {
-      localStorage.setItem("bl_token", data.access_token);
-      localStorage.setItem("bl_user", JSON.stringify(data));
-    }
-    return { ok: res.ok, data };
-  },
-
-  async register(email, password, name) {
-    const res = await request("POST", "/auth/register", { email, password, name });
-    if (res?.ok) {
-      localStorage.setItem("bl_token", res.data.access_token);
-      localStorage.setItem("bl_user", JSON.stringify(res.data));
-    }
-    return res;
-  },
-
-  logout() {
-    localStorage.removeItem("bl_token");
-    localStorage.removeItem("bl_user");
-    localStorage.removeItem("bl_apikey");
-  },
-
-  getUser() {
-    try { return JSON.parse(localStorage.getItem("bl_user")); } catch { return null; }
-  },
-
-  isLoggedIn() {
-    return !!getToken();
-  },
+  download,
 
   async pollRun(runId, onStatus, maxWait = 120) {
     for (let i = 0; i < maxWait; i++) {

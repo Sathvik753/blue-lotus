@@ -1,86 +1,98 @@
 import React from "react";
-import { Outlet, NavLink, useNavigate } from "react-router-dom";
-import { api } from "../utils/api";
-import {
-  Activity, Clock, BarChart2, Key, LogOut, Zap
-} from "lucide-react";
+import { Outlet, NavLink } from "react-router-dom";
+import { Clock, BarChart2, Zap } from "lucide-react";
+import Logo from "./Logo";
 
 const NAV = [
   { to: "/run", icon: Zap, label: "New Run" },
   { to: "/history", icon: Clock, label: "History" },
   { to: "/compare", icon: BarChart2, label: "Compare" },
-  { to: "/keys", icon: Key, label: "API Keys" },
 ];
 
+const SIDEBAR_W = 244;
+
 export default function Layout() {
-  const navigate = useNavigate();
-  const user = api.getUser();
-
-  function logout() {
-    api.logout();
-    navigate("/login");
-  }
-
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
       <aside style={{
-        width: 220, background: "var(--dark)", borderRight: "1px solid var(--border)",
-        display: "flex", flexDirection: "column", padding: "24px 0", flexShrink: 0,
-        position: "fixed", top: 0, left: 0, height: "100vh",
+        width: SIDEBAR_W, flexShrink: 0, position: "fixed", top: 0, left: 0, height: "100vh",
+        display: "flex", flexDirection: "column", padding: "28px 0",
+        background: "linear-gradient(180deg, rgba(15,28,43,0.92), rgba(6,11,20,0.92))",
+        backdropFilter: "blur(18px)", WebkitBackdropFilter: "blur(18px)",
+        borderRight: "1px solid var(--border-soft)",
       }}>
-        <div style={{ padding: "0 20px 32px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-            <Activity size={20} color="var(--gold)" />
-            <span style={{
-              fontFamily: "Syne, sans-serif", fontWeight: 800, fontSize: 16,
-              color: "var(--gold)", letterSpacing: "-0.02em",
-            }}>
+        {/* Brand */}
+        <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "0 22px 30px" }}>
+          <Logo size={42} />
+          <div>
+            <div style={{
+              fontFamily: "Syne, sans-serif", fontWeight: 800, fontSize: 17,
+              letterSpacing: "-0.02em", lineHeight: 1,
+            }} className="gradient-text">
               Blue Lotus
-            </span>
-          </div>
-          <div style={{ fontSize: 10, color: "var(--muted)", letterSpacing: "0.1em", textTransform: "uppercase", paddingLeft: 30 }}>
-            Labs
+            </div>
+            <div style={{
+              fontSize: 9.5, color: "var(--muted)", letterSpacing: "0.32em",
+              textTransform: "uppercase", marginTop: 4,
+            }}>
+              Labs · Risk
+            </div>
           </div>
         </div>
 
-        <nav style={{ flex: 1, padding: "0 12px" }}>
+        {/* Nav */}
+        <nav style={{ flex: 1, padding: "0 14px" }}>
           {NAV.map(({ to, icon: Icon, label }) => (
             <NavLink key={to} to={to} style={({ isActive }) => ({
-              display: "flex", alignItems: "center", gap: 10,
-              padding: "10px 12px", borderRadius: 8, marginBottom: 2,
-              color: isActive ? "var(--gold)" : "var(--muted)",
-              background: isActive ? "rgba(212,172,13,0.08)" : "transparent",
-              textDecoration: "none", fontSize: 13, fontWeight: 500,
-              transition: "all 0.15s",
+              position: "relative",
+              display: "flex", alignItems: "center", gap: 12,
+              padding: "12px 14px", borderRadius: 11, marginBottom: 4,
+              color: isActive ? "var(--white)" : "var(--muted)",
+              background: isActive
+                ? "linear-gradient(100deg, rgba(212,172,13,0.16), rgba(33,208,173,0.06))"
+                : "transparent",
+              boxShadow: isActive ? "inset 0 0 0 1px rgba(212,172,13,0.25)" : "none",
+              textDecoration: "none", fontSize: 13.5, fontWeight: 600,
+              fontFamily: "Syne, sans-serif", letterSpacing: "0.01em",
+              transition: "all 0.18s ease",
             })}>
-              <Icon size={16} />
-              {label}
+              {({ isActive }) => (
+                <>
+                  {isActive && (
+                    <span style={{
+                      position: "absolute", left: -14, top: "50%", transform: "translateY(-50%)",
+                      width: 3, height: 22, borderRadius: 3,
+                      background: "linear-gradient(var(--gold), var(--teal-2))",
+                      boxShadow: "0 0 10px var(--glow-gold)",
+                    }} />
+                  )}
+                  <Icon size={17} color={isActive ? "var(--gold)" : "currentColor"} />
+                  {label}
+                </>
+              )}
             </NavLink>
           ))}
         </nav>
 
-        <div style={{ padding: "16px 20px", borderTop: "1px solid var(--border)" }}>
-          <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 4, letterSpacing: "0.06em" }}>
-            {user?.email}
+        {/* Footer status */}
+        <div style={{ padding: "16px 22px 0", borderTop: "1px solid var(--border-soft)", margin: "0 8px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11, color: "var(--muted)" }}>
+            <span style={{
+              width: 7, height: 7, borderRadius: "50%", background: "var(--teal-2)",
+              boxShadow: "0 0 8px var(--teal-2)",
+            }} className="status-pill" />
+            Engine online
           </div>
-          <div style={{
-            display: "inline-block", background: "rgba(212,172,13,0.15)",
-            color: "var(--gold)", fontSize: 10, fontWeight: 600,
-            padding: "2px 8px", borderRadius: 20, letterSpacing: "0.08em",
-            textTransform: "uppercase", marginBottom: 12,
-          }}>
-            {user?.plan || "free"}
+          <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 8, opacity: 0.6, letterSpacing: "0.04em" }}>
+            v1.0 · Monte Carlo · EVT
           </div>
-          <button onClick={logout} className="btn btn-secondary" style={{
-            width: "100%", display: "flex", alignItems: "center",
-            gap: 8, justifyContent: "center", fontSize: 12,
-          }}>
-            <LogOut size={14} /> Logout
-          </button>
         </div>
       </aside>
 
-      <main style={{ marginLeft: 220, flex: 1, padding: "40px", minHeight: "100vh" }}>
+      <main style={{
+        marginLeft: SIDEBAR_W, flex: 1, padding: "44px 48px", minHeight: "100vh",
+        maxWidth: 1280,
+      }}>
         <Outlet />
       </main>
     </div>

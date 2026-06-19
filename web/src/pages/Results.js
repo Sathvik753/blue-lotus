@@ -6,7 +6,7 @@ import {
   ReferenceLine, CartesianGrid,
 } from "recharts";
 import {
-  ArrowLeft, Download, TrendingDown, Shield, Clock,
+  ArrowLeft, Download, FileText, TrendingDown, Shield, Clock,
   AlertTriangle, CheckCircle, XCircle, ChevronDown, ChevronUp,
 } from "lucide-react";
 
@@ -199,27 +199,21 @@ function BacktestRow({ br }) {
 export default function Results() {
   const { runId }  = useParams();
   const navigate = useNavigate();
- const [data, setData] = useState(null);
- const [loading, setLoading] = useState(true);
- const [error, setError] = useState("");
-  const [exporting, setExporting] = useState(false);
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [exporting, setExporting] = useState("");
 
-  async function handleExport() {
+  async function handleExport(kind) {
     if (!data) return;
-    setExporting(true);
+    setExporting(kind);
     try {
-      const res = await api.get(`/run/${runId}`);
-      const json = JSON.stringify(res.data, null, 2);
-      const blob = new Blob([json], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      const name = (data.strategy_name || data.ticker || "run").replace(/\s+/g, "_");
-      a.href = url;
-      a.download = `bluelotus_${name}_${runId.slice(0, 8)}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
+      const path = kind === "pdf" ? `/run/${runId}/pdf` : `/run/${runId}/export`;
+      await api.download(path, `bluelotus_${runId.slice(0, 8)}.${kind}`);
+    } catch (e) {
+      setError(`Export failed: ${e.message}`);
     } finally {
-      setExporting(false);
+      setExporting("");
     }
   }
 
@@ -293,21 +287,31 @@ export default function Results() {
             <ArrowLeft size={12} /> Back
           </button>
           <div className="accent-line" />
-          <h1 style={{ fontSize: 28 }}>{data.strategy_name || data.ticker || "Results"}</h1>
+          <h1 style={{ fontSize: 30 }} className="gradient-text">{data.strategy_name || data.ticker || "Results"}</h1>
           <p style={{ color: "var(--muted)", fontSize: 12, marginTop: 4 }}>
             {sim?.n_paths?.toLocaleString()} simulated scenarios &nbsp;·&nbsp;
             {sim?.horizon}-day forward horizon &nbsp;·&nbsp;
             {data.completed_at ? new Date(data.completed_at).toLocaleString() : ""}
           </p>
         </div>
-        <button
-          onClick={handleExport}
-          disabled={exporting}
-          className="btn btn-secondary"
-          style={{ display: "flex", alignItems: "center", gap: 8 }}
-        >
-          <Download size={14} /> {exporting ? "Downloading…" : "Export JSON"}
-        </button>
+        <div style={{ display: "flex", gap: 10 }}>
+          <button
+            onClick={() => handleExport("json")}
+            disabled={!!exporting}
+            className="btn btn-secondary"
+            style={{ display: "flex", alignItems: "center", gap: 8 }}
+          >
+            <Download size={14} /> {exporting === "json" ? "Downloading…" : "JSON"}
+          </button>
+          <button
+            onClick={() => handleExport("pdf")}
+            disabled={!!exporting}
+            className="btn btn-primary"
+            style={{ display: "flex", alignItems: "center", gap: 8 }}
+          >
+            <FileText size={14} /> {exporting === "pdf" ? "Building…" : "PDF Report"}
+          </button>
+        </div>
       </div>
 
       {/* ── Key metric cards ── */}
@@ -409,7 +413,7 @@ export default function Results() {
         <div className="card">
           <SectionHeader
             title="Market Regime Breakdown"
-            description="Long-run time spent in each market state, learned by the Hidden Markov Model from historical data."
+            description="Long-run time spent in each market state, classified from rolling realized volatility in the historical data."
           />
           <div style={{ display: "flex", gap: 12, flexDirection: "column" }}>
             {[
@@ -591,7 +595,7 @@ export default function Results() {
           </div>
           <div>
             <div style={{ fontSize: 11, color: MUTED, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>
-              Regime Model (HMM)
+              Regime Model
             </div>
             {[
               ["Type",           "3-state RV-Percentile"],

@@ -5,10 +5,14 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sess
 from sqlalchemy.pool import NullPool
 from db.models import Base
 
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql+asyncpg://postgres:password@localhost:5432/bluelotus"
-)
+# Postgres in production (DATABASE_URL set by the host); SQLite locally so the
+# app runs end-to-end with no external database.
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./bluelotus.db")
+
+# Railway/Render hand out postgres:// URLs; SQLAlchemy's async driver needs the
+# explicit +asyncpg dialect.
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
 
 engine = create_async_engine(
     DATABASE_URL,

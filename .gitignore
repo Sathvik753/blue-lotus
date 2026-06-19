@@ -6,6 +6,11 @@ node_modules/
 # Build output
 /build
 /dist
+web/build
+
+# Local SQLite database (created at runtime when DATABASE_URL is unset)
+*.db
+bluelotus.db
 
 # Environment files — never commit these
 .env

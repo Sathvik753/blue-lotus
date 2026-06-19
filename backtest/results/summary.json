@@ -1,0 +1,20 @@
+{
+  "generated_at": "2026-06-18",
+  "n_cells": 89,
+  "n_events": 9,
+  "n_assets": 10,
+  "p5_breaches": 50,
+  "p5_breach_rate": 0.5617977528089888,
+  "p5_kupiec_lr": 181.5569394462342,
+  "p5_kupiec_pvalue": 2.215568483128866e-41,
+  "p1_breaches": 28,
+  "p1_breach_rate": 0.3146067415730337,
+  "p1_kupiec_lr": 148.26846157609475,
+  "p1_kupiec_pvalue": 4.144260346823272e-34,
+  "covered_90_count": 38,
+  "covered_90_rate": 0.42696629213483145,
+  "mean_pct_rank": 0.13726108396398065,
+  "median_pct_rank": 0.03938598262977176,
+  "mean_coverage_ratio": 1.3598511819463388,
+  "n_skipped": 1
+}

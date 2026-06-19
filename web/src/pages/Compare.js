@@ -50,8 +50,10 @@ export default function Compare() {
   return (
     <div className="fade-in">
       <div className="accent-line" />
-      <h1 style={{ fontSize: 32, marginBottom: 8 }}>Compare</h1>
-      <p style={{ color: "var(--muted)", marginBottom: 32 }}>Side-by-side risk comparison across tickers.</p>
+      <h1 style={{ fontSize: 34, marginBottom: 8 }} className="gradient-text">Compare</h1>
+      <p style={{ color: "var(--muted)", marginBottom: 32 }}>
+        Run the engine across multiple tickers and rank their risk side by side.
+      </p>
 
       <div className="card" style={{ marginBottom: 16 }}>
         <div style={{ marginBottom: 16 }}>
