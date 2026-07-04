@@ -58,7 +58,7 @@ class CustomRunRequest(BaseModel):
     @field_validator("returns")
     @classmethod
     def validate_returns(cls, v):
-        if any(abs(r) > 1.0 for r in v):
+        if any(abs(r) > 10.0 for r in v):
             raise ValueError(
                 "Returns look like percentages (e.g. 5.2). "
                 "Please supply decimal returns (e.g. 0.052)."
