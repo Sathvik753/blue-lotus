@@ -69,30 +69,29 @@
 % --------------------------------------------------------------------- abstract
 \begin{abstract}
 \noindent
-We present the Blue Lotus Stress-Testing Engine, a system that turns a single
-return series into a forward-looking distribution of drawdown, tail-loss, and
-recovery outcomes. The engine couples together a deterministic three-state
-volatility regime model, Bayesian shrinkage of the regime parameters, Generalized
-Pareto tail estimation via Peaks-over-Threshold Extreme Value Theory, and
+We present the Blue Lotus Stress-Testing Engine, a system that maps a single
+return series to a forward-looking distribution of drawdown, tail-loss, and
+recovery outcomes. The engine integrates a deterministic three-state volatility
+regime model, Bayesian shrinkage of the regime parameters, Generalized Pareto
+tail estimation via Peaks-over-Threshold Extreme Value Theory, and
 regime-switching Monte Carlo path generation with a drawdown-conditional blend and
-a hard loss floor; on top of this sit an optional Esscher importance resampler and
-bootstrapped confidence intervals on every metric we report. A Model Fragility
-Index, defined as the mean Wasserstein-1 distance between the baseline and
-parameter-perturbed drawdown distributions, then gives a single auditable measure
-of how much the risk estimates lean on inputs we are not sure about.
+a hard loss floor. An optional Esscher importance resampler and bootstrapped
+confidence intervals on every reported metric complete the pipeline. A Model
+Fragility Index, defined as the mean Wasserstein-1 distance between the baseline
+and parameter-perturbed drawdown distributions, provides a single auditable measure
+of the estimates' sensitivity to parameter uncertainty.
 
-Beyond describing the method, we put it through a strict out-of-sample test. For
-nine named market crises and ten liquid asset proxies we re-fit the engine using
-only the history available before each crisis, and compare the predicted drawdown
-distribution against what actually happened --- 89 crisis cells in all. An
-identical protocol on 213 calm windows supplies the calibration control. On calm
-data the $5\%$ and $1\%$ tail bounds are breached in $2.8\%$ and $0.9\%$ of cells,
-neither rejectable by a Kupiec test ($p=0.11$, $p=0.93$). Under the nine crises
-those same rates jump to $56\%$ and $31\%$, degrading more or less monotonically
-with severity and breaking down completely only at the two fastest systemic shocks
-on record. So the engine reproduces ordinary risk faithfully, and it reports ---
-rather than papers over --- the residual tail gap that history alone simply cannot
-close.
+The method is evaluated under a strict out-of-sample protocol. For nine named
+market crises and ten liquid asset proxies, the engine is re-estimated using only
+the history available prior to each crisis and its predicted drawdown distribution
+is compared with the realized outcome, yielding 89 crisis cells; an identical
+protocol applied to 213 calm windows constitutes the calibration control. On calm
+data the $5\%$ and $1\%$ tail bounds are breached in $2.8\%$ and $0.9\%$ of cells
+respectively, neither rejectable by a Kupiec test ($p=0.11$, $p=0.93$). Under the
+nine crises these rates rise to $56\%$ and $31\%$, degrading monotonically with
+severity and failing entirely only at the two fastest systemic shocks on record.
+The engine thus reproduces ordinary risk faithfully and reports, rather than
+conceals, the residual tail gap that history alone cannot close.
 \end{abstract}
 
 \noindent\textbf{Keywords:} stress testing, Monte Carlo, regime switching,
@@ -116,37 +115,38 @@ modelling assumptions described herein.}
 % =============================================================== 1 Introduction
 \section{Introduction}
 
-\subsection{What the engine does, in plain terms}
-Give the engine a history of daily returns --- a market index, a fund, or the
-profit-and-loss of a trading strategy --- and it answers one question:
-\emph{if the world keeps behaving the way this series suggests it can, how bad
-could the next stretch get?} It does not forecast a price, and it does not call a
-direction. What it does instead is simulate tens of thousands of plausible forward
-paths and report the \emph{distribution} of the three things an allocator actually
-cares about: how deep a drawdown to expect, how heavy the losses run in the worst
-few percent of outcomes, and how long recovery tends to take. Every headline number
-comes with a confidence interval attached, and the whole run can be exported as a
-clean JSON object or a formatted PDF at the click of a button.
+\subsection{Scope and objective}
+Given a history of daily returns --- a market index, a fund, or the profit-and-loss
+of a trading strategy --- the engine addresses a single question: conditional on
+the return-generating behaviour implied by the series, what is the distribution of
+adverse outcomes over a forward horizon? The engine does not forecast a price level
+or a direction. It simulates a large ensemble of forward paths and reports the
+\emph{distribution} of three quantities of primary interest to an allocator: the
+expected maximum drawdown, the severity of losses in the extreme lower percentiles,
+and the time required to recover. Each reported statistic is accompanied by a
+confidence interval, and every run is exportable as a structured JSON object or a
+formatted PDF.
 
-\subsection{Why ordinary Monte Carlo is not enough}
-The textbook approach draws returns from one fixed distribution and simulates
-forward. It is clean, and it is wrong in two ways that both matter for risk work.
+\subsection{Limitations of stationary Monte Carlo}
+The standard approach draws returns from a single fixed distribution and simulates
+forward. It is analytically convenient but deficient in two respects that are
+material to risk measurement.
 
-First, returns are not drawn from a single stationary law. Volatility clusters,
-losses beget losses, and the probability of a large drop conditional on a recent
-run of drops is far higher than its unconditional value. A model blind to that
-structure will understate sustained crisis drawdowns while, at the same time,
-overstating isolated single-day moves.
+First, returns are not generated by a single stationary law. Volatility clusters,
+losses exhibit serial dependence, and the probability of a large decline
+conditional on a recent sequence of declines substantially exceeds its
+unconditional value. A model that ignores this structure understates sustained
+crisis drawdowns while overstating isolated single-day moves.
 
-Second, tail data is scarce --- painfully so. A fifteen-year equity history holds
-roughly four thousand daily observations, of which only a few hundred belong to
-genuine stress. Any tail model fit to those few hundred points carries large
-estimation error, and plain simulation just propagates that error silently, with
-no measure at all of how much to trust the answer it hands back.
+Second, tail observations are scarce. A fifteen-year equity history contains
+approximately four thousand daily observations, of which only a few hundred
+correspond to genuine stress. Any tail model estimated from those few hundred
+points carries substantial estimation error, and unadjusted simulation propagates
+that error without any accompanying measure of its reliability.
 
 \subsection{Contributions}
-The Blue Lotus engine addresses both problems and adds an explicit honesty
-mechanism. Concretely, this paper makes four contributions:
+The Blue Lotus engine addresses both deficiencies and incorporates an explicit
+model-risk diagnostic. This paper makes four contributions:
 \begin{enumerate}[leftmargin=1.6em, itemsep=2pt]
   \item A fully specified, auditable risk engine (Sections~\ref{sec:glance}--\ref{sec:method})
   that structures simulation around a deterministic volatility-regime model,
@@ -159,18 +159,18 @@ mechanism. Concretely, this paper makes four contributions:
   and, centrally, a strict out-of-sample event-study backtest across nine
   crises and ten assets, with a 213-cell calm-period calibration control
   (Section~\ref{sec:backtest}).
-  \item An honest accounting (Sections~\ref{sec:discussion}--\ref{sec:limits})
-  of where the engine is well calibrated and where, by construction, no
-  history-fit model can reach.
+  \item A transparent assessment (Sections~\ref{sec:discussion}--\ref{sec:limits})
+  of the conditions under which the engine is well calibrated and those under
+  which, by construction, no history-calibrated model can be accurate.
 \end{enumerate}
 
 % =============================================================== 2 At a glance
-\section{The Engine at a Glance}
+\section{Engine Overview}
 \label{sec:glance}
 
-The engine is a pipeline of seven stages, each a self-contained module with a
-typed input and output so that any stage can be inspected, replaced, or unit
-tested in isolation.
+The engine is a pipeline of seven stages. Each stage is a self-contained module
+with typed inputs and outputs, so that any stage may be inspected, replaced, or
+unit-tested in isolation.
 
 \begin{enumerate}[leftmargin=1.7em, itemsep=2pt]
   \item \textbf{Input processing.} Clean the return series, winsorise extremes,
@@ -193,27 +193,27 @@ tested in isolation.
 
 The result is serialised to JSON and rendered to a PDF tear-sheet, and the same
 core is exposed through a REST API and two front-ends (Section~\ref{sec:system}).
-Everything downstream of stage~1 is deterministic once the random seed is fixed,
-so any run reproduces exactly --- a property we relied on heavily when building
-the backtest.
+All stages downstream of stage~1 are deterministic conditional on a fixed random
+seed, so any run is exactly reproducible --- a property on which the backtesting
+protocol depends.
 
 % =============================================================== 3 Rationale
 \section{Design Rationale}
 \label{sec:rationale}
 
-Each modelling choice trades sophistication against auditability, and the engine
-consistently favours methods whose outputs a risk officer can actually explain to
-someone else.
+Each modelling choice trades statistical sophistication against auditability. The
+engine consistently favours methods whose outputs admit a direct interpretation by
+a risk officer.
 
 \paragraph{Deterministic regimes over a hidden Markov model.}
-An earlier version of the engine used a three-state Gaussian HMM fit by
-Baum--Welch. It was theoretically attractive, but in practice it produced crisis
-fractions that swung wildly from one asset to the next and needed manual reseeding
-to avoid degenerate states --- not the kind of thing you want sitting under a risk
-number. The current detector assigns regimes by explicit rules on rolling
-volatility and trend (Section~\ref{sec:regime}). Every label can be justified in a
-single sentence, the crisis fraction is calibrated by construction through its
-percentile thresholds, and there is no latent state left to misconverge.
+An earlier version of the engine employed a three-state Gaussian HMM estimated by
+Baum--Welch. Although theoretically attractive, it produced crisis fractions that
+varied substantially across assets and required manual reseeding to avoid
+degenerate states --- properties ill-suited to a production risk system. The
+current detector assigns regimes by explicit rules on rolling volatility and trend
+(Section~\ref{sec:regime}). Each label admits a one-sentence justification, the
+crisis fraction is calibrated by construction through its percentile thresholds,
+and the model contains no latent state subject to misconvergence.
 
 \paragraph{Extreme Value Theory for the tail.}
 Parametric bulk distributions such as the Student-$t$ constrain the extreme tail
@@ -228,17 +228,16 @@ parameters toward pooled estimates by an amount that falls as the regime's
 sample grows, trading a little bias for a large reduction in variance.
 
 \paragraph{Esscher tilt as an optional corrector.}
-When the simulated mean or ES drifts away from the EVT and regime targets, an
-Esscher exponential tilt reweights the paths to pull them back. The important part
-is that the tilt is optional and self-disabling: if its solver fails to converge,
-it falls back to identity weights and leaves the historical measure untouched,
-rather than forcing through an unstable correction just to hit a target.
+When the simulated mean or Expected Shortfall departs from the EVT and regime
+targets, an Esscher exponential tilt reweights the paths to restore consistency.
+The tilt is optional and self-disabling: if its solver fails to converge, the
+engine reverts to identity weights and preserves the historical measure, rather
+than imposing an unstable correction to satisfy a target.
 
-\paragraph{Bootstrap intervals everywhere.}
-A risk number quoted without an interval invites false precision. The engine
-resamples paths to attach a 90\% confidence band to every scalar it reports, so
-the user sees the estimation uncertainty directly, up front, instead of having to
-guess at it.
+\paragraph{Bootstrap intervals throughout.}
+A risk estimate reported without an interval conveys false precision. The engine
+resamples paths to attach a 90\% confidence band to every reported scalar, so that
+estimation uncertainty is quantified explicitly rather than left implicit.
 
 \paragraph{A fragility index for model risk.}
 Even a well-calibrated model is only as trustworthy as it is stable. The Model
@@ -251,16 +250,16 @@ rather than an afterthought.
 \label{sec:method}
 
 \subsection{Data preprocessing}
-Let $\{r_t\}_{t=1}^T$ be a daily return series. Before any of the modelling runs,
-the series is validated as \emph{decimal} returns rather than percentages, and the
-accepted per-day range is set deliberately wide --- up to roughly an
-order-of-magnitude single-day move --- so that genuinely volatile inputs (a
-crypto asset, or a single name gapping on news) are not thrown out as malformed.
-Returns are then winsorised at the 1st and 99th percentiles, clipping the extreme
-observations to those boundaries so that a handful of points cannot dominate the
-moment and tail estimates. Raw mean, standard deviation, skewness and excess
-kurtosis are all recorded \emph{before} winsorising, for reporting. Annualised
-volatility is $\hat\sigma_{\text{ann}} = \hat\sigma_{\text{daily}}\sqrt{252}$.
+Let $\{r_t\}_{t=1}^T$ be a daily return series. Prior to estimation, the series is
+validated as \emph{decimal} returns rather than percentages. The admissible
+per-day range is set intentionally wide --- up to an order-of-magnitude single-day
+move --- so that legitimately high-volatility inputs, such as digital assets or
+individual securities subject to gap risk, are not rejected as malformed. Returns
+are then winsorised at the 1st and 99th percentiles, clipping extreme observations
+to those boundaries so that a small number of points cannot dominate the moment
+and tail estimates. Raw mean, standard deviation, skewness, and excess kurtosis
+are recorded \emph{prior} to winsorising for reporting. Annualised volatility is
+$\hat\sigma_{\text{ann}} = \hat\sigma_{\text{daily}}\sqrt{252}$.
 
 \subsection{Regime detection}
 \label{sec:regime}
@@ -417,23 +416,21 @@ multi-asset path is left to future work.
 \section{System Architecture and Implementation}
 \label{sec:system}
 
-The engine ships as a production service, not just a research script. The
-numerical core (\texttt{engine/core.py}) is pure NumPy/SciPy and carries no web
-dependencies at all. A FastAPI application (\texttt{api/}) wraps it: it submits
-the long runs as background jobs and persists runs and results through an async
-SQLAlchemy layer (\texttt{db/}). The authentication scaffolding --- JWT tokens and
-API keys --- is present in the codebase but switched off in the current build,
-which runs every request as a single shared workspace user; turning accounts back
-on is essentially a one-line dependency swap, so the door is left open without
-getting in the way of the demo. Results are converted to a JSON-safe payload by a
-dedicated serialiser (\texttt{engine/serializer.py}) and to a formatted tear-sheet
-by a ReportLab module (\texttt{reports/pdf.py}), and both are reachable from
-one-click buttons in the interface. Two front-ends consume the API: a React
-single-page application (\texttt{web/}), recently rebuilt around a cleaner visual
-system, for interactive use, and a Streamlit app (\texttt{frontend/}) for quick
-analysis. The same code runs locally under Docker Compose and in the cloud on
-Google Cloud Run, and --- as noted above --- every run is reproducible from its
-seed.
+The engine is deployed as a production service rather than a research script
+alone. The numerical core (\texttt{engine/core.py}) is implemented in NumPy/SciPy
+and has no web dependencies. A FastAPI application (\texttt{api/}) wraps the core,
+submitting long-running computations as background jobs and persisting runs and
+results through an asynchronous SQLAlchemy layer (\texttt{db/}). The authentication
+subsystem --- JWT tokens and API keys --- is implemented in the codebase but
+disabled in the current build, which executes every request as a single shared
+workspace user; re-enabling per-account authentication requires a single
+dependency substitution. Results are serialised to a JSON-safe payload by a
+dedicated module (\texttt{engine/serializer.py}) and to a formatted tear-sheet by
+a ReportLab module (\texttt{reports/pdf.py}); both are exposed as direct exports in
+the interface. Two front-ends consume the API: a React single-page application
+(\texttt{web/}) for interactive use and a Streamlit application (\texttt{frontend/})
+for expedited analysis. The identical codebase runs locally under Docker Compose
+and in production on Google Cloud Run, and every run is reproducible from its seed.
 
 % =============================================================== 6 SPY
 \section{Single-Asset Characterisation: SPY}
@@ -462,13 +459,13 @@ are reported under $\Prob$.
 
 \paragraph{Risk metrics.}
 Table~\ref{tab:spy} reports the core outputs with their 90\% bootstrap intervals.
-The mean one-year maximum drawdown comes out at $-14.1\%$ and the 5th-percentile
-drawdown at $-37.0\%$ --- a sensible tail benchmark for sizing a position on a
-$17\%$-vol index. One number needs a caveat: the high never-recover rate is a
-horizon artefact, not a claim about the long-run index. Many paths that draw down
-late in the $252$-day window simply run out of days to climb back, and the metric
-counts them as unrecovered even though a longer horizon would very likely catch
-the rebound.
+The mean one-year maximum drawdown is $-14.1\%$ and the 5th-percentile drawdown is
+$-37.0\%$, a reasonable tail benchmark for position sizing on a $17\%$-volatility
+index. The elevated never-recover rate requires qualification: it is a horizon
+artefact rather than a statement about the long-run index. Paths that enter
+drawdown late in the $252$-day window have insufficient remaining horizon to
+recover and are recorded as unrecovered, although a longer horizon would in most
+cases capture the subsequent recovery.
 
 \begin{table}[h]
 \centering
@@ -500,10 +497,11 @@ return process.
 \section{Out-of-Sample Backtest and Verification}
 \label{sec:backtest}
 
-The single-asset section shows the engine produces internally sensible numbers.
-But internal sensibility is the easy part. The harder question --- the one that
-actually matters --- is whether the predicted distributions actually contained
-what went on to happen. We answer that one strictly out-of-sample.
+The single-asset section establishes that the engine produces internally coherent
+estimates. Internal coherence, however, is a necessary but not a sufficient
+condition. The material question is whether the predicted distributions in fact
+contained the realized outcomes. This question is addressed strictly
+out-of-sample.
 
 \subsection{Protocol}
 For an asset with returns $r_{1:T}$ and dates $d_{1:T}$ and a crisis window
@@ -537,8 +535,8 @@ breaches in $n$ cells at level $p$ the Kupiec proportion-of-failures statistic
 \end{equation}
 is asymptotically $\chi^2_1$. The calm control provides the regime in which the
 test's nominal-rate assumption is appropriate; on the deliberately adversarial
-crisis set the statistic quantifies the conditional miss rather than testing for
-``pass.''
+crisis set the statistic quantifies the conditional exceedance rate rather than
+functioning as an acceptance test.
 
 \subsection{Data universe}
 Ten liquid proxies span equity beta (SPY, QQQ, IWM, DIA, EFA), sector
@@ -550,15 +548,15 @@ episode. The grid yields $89$ crisis cells (one skipped: high-yield credit in
 from $22$ non-overlapping six-month windows.
 
 \subsection{Calm-period calibration}
-Table~\ref{tab:headline} and Figure~\ref{fig:calib} establish the control. On
-calm windows the engine breaches its $5\%$ bound in $2.8\%$ of cells and its $1\%$
-bound in $0.9\%$ --- both statistically indistinguishable from nominal (Kupiec
-$p=0.11$ and $0.93$). The mean PIT rank of $0.69$ tells us the engine is, if
-anything, running mildly conservative on ordinary data: it predicts somewhat more
-risk than actually realises. For a risk system that is the prudent direction to
-err in, and it is also the precondition for taking the crisis results seriously at
-all --- a tool that cried wolf in calm markets would give us no standing to
-interpret its behaviour in the storms.
+Table~\ref{tab:headline} and Figure~\ref{fig:calib} establish the control. On calm
+windows the engine breaches its $5\%$ bound in $2.8\%$ of cells and its $1\%$ bound
+in $0.9\%$, both statistically indistinguishable from nominal (Kupiec $p=0.11$ and
+$0.93$). The mean PIT rank of $0.69$ indicates that the engine is mildly
+conservative on ordinary data, predicting marginally more risk than is realized.
+For a risk system this is the prudent direction of error, and it is a precondition
+for interpreting the crisis results: a model that generated excessive exceptions
+under calm conditions would provide no basis for assessing its behaviour under
+stress.
 
 \begin{table}[h]
 \centering
@@ -589,14 +587,13 @@ fall in the engine's lower tail.}
 \end{figure}
 
 \subsection{Crisis event study}
-The crisis picture (Table~\ref{tab:events}, Figures~\ref{fig:scatter}--\ref{fig:eventrank})
-turns the control on its head. Coverage falls away, more or less monotonically,
-with severity: the 2015--16 China/oil selloff is fully covered and the 2023
-regional-bank episode largely so, whereas every single COVID-2020 cell and nearly
-every 2008 cell breaches even the $1\%$ bound. Realized crisis drawdowns sit at a
-mean PIT rank of just $0.14$ --- deep down in the predicted lower tail --- and the
-two great systemic shocks land essentially at rank zero, which is about as
-emphatic a miss as the statistic can register.
+The crisis results (Table~\ref{tab:events}, Figures~\ref{fig:scatter}--\ref{fig:eventrank})
+invert the control. Coverage degrades monotonically with severity: the 2015--16
+China/oil selloff is fully covered and the 2023 regional-bank episode substantially
+so, whereas every COVID-2020 cell and nearly every 2008 cell breaches even the
+$1\%$ bound. Realized crisis drawdowns exhibit a mean PIT rank of $0.14$, deep
+within the predicted lower tail, and the two most severe systemic shocks fall
+essentially at rank zero, the most extreme exceedance the statistic can record.
 
 \begin{table}[h]
 \centering
@@ -670,40 +667,41 @@ Gold (GLD)              & 9 & $-11.2$ & $-15.0$ & 2/9 & $67\%$ & $0.35$ \\
 \end{table}
 
 \subsection{Exemplar cells}
-Four cells make the spectrum concrete. \textbf{SPY in COVID-2020}: realized
-$-38.2\%$ against a predicted $p5$ of $-8.6\%$ ($p1$ $-11.9\%$), rank $0.000$ ---
-the fastest $30\%$ equity drawdown in history lies outside anything pre-2020 data
-implied. \textbf{XLF in 2008}: realized $-103.6\%$ (additive) against $p5$
-$-38.2\%$, rank $0.000$ --- a solvency crisis in the financial sector itself.
-\textbf{SPY in 2015--16}: realized $-13.3\%$ against $p5$ $-20.3\%$, rank
-$0.25$ --- a textbook covered correction. \textbf{SPY in 2023}: realized
-$-3.4\%$ against $p5$ $-6.7\%$, rank $0.28$ --- contained, and the engine knew it.
+Four cells illustrate the range of outcomes. \textbf{SPY in COVID-2020}: realized
+$-38.2\%$ against a predicted $p5$ of $-8.6\%$ ($p1$ $-11.9\%$), rank $0.000$; the
+most rapid $30\%$ equity drawdown on record lies outside the support implied by
+pre-2020 data. \textbf{XLF in 2008}: realized $-103.6\%$ (additive) against $p5$
+$-38.2\%$, rank $0.000$, reflecting a solvency crisis internal to the financial
+sector. \textbf{SPY in 2015--16}: realized $-13.3\%$ against $p5$ $-20.3\%$, rank
+$0.25$, a correction fully contained within the predicted distribution.
+\textbf{SPY in 2023}: realized $-3.4\%$ against $p5$ $-6.7\%$, rank $0.28$, again
+contained and correctly bounded by the engine.
 
 % =============================================================== 8 Discussion
 \section{Discussion}
 \label{sec:discussion}
 
-Taken together, the two regimes deliver a single message. The calm control shows
-the engine is not broken: at both the $5\%$ and the $1\%$ tail level its
-out-of-sample exception rates are statistically indistinguishable from nominal,
-and it errs, sensibly, toward caution. The crisis study then shows that the
-outcomes which \emph{do} breach are precisely the events a history-only model was
-always going to miss --- the sharpest, most reflexive systemic shocks, the ones
-where volatility, correlation and liquidity all dislocate faster than any trailing
-window can encode. Before March 2020, put simply, there was no 2020 in the data.
+The two regimes support a single conclusion. The calm control demonstrates that
+the engine is correctly specified for ordinary conditions: at both the $5\%$ and
+the $1\%$ tail level its out-of-sample exception rates are statistically
+indistinguishable from nominal, with error biased toward conservatism. The crisis
+study demonstrates that the outcomes which do breach are precisely those that a
+history-calibrated model cannot anticipate --- the most abrupt and reflexive
+systemic shocks, in which volatility, correlation, and liquidity dislocate more
+rapidly than any trailing estimation window can represent. Prior to March 2020,
+the March 2020 event was absent from the data.
 
-None of this is a defect peculiar to Blue Lotus; it is a property of the
-estimation problem itself. Any model whose tail is calibrated to realized returns
-inherits the ceiling of its own worst observed history --- there is no escaping
-that with cleverness alone. What the backtest contributes is to \emph{measure} the
-residual gap rather than quietly hide it, and to show that the gap is monotone in
-severity and concentrated in the exposures that genuinely carry systemic risk.
-This, in practice, is why the production engine does not lean on the empirical
-tail alone: its crisis-regime structure, the drawdown-conditional blend, and the
-operator-tunable loss floor are all there to push the simulated distribution out
-into the region that this backtest shows lies beyond historical reach. The honest
-way to deploy it, then, is to use the engine as calibrated here for ordinary risk,
-and to engage the crisis overlay when you are sizing for the systemic scenarios.
+This is not a defect specific to Blue Lotus; it is a property of the estimation
+problem. Any model whose tail is calibrated to realized returns is bounded by its
+worst observed history. The contribution of the backtest is to \emph{quantify} the
+residual gap rather than to obscure it, and to establish that the gap is monotone
+in severity and concentrated in the exposures that carry systemic tail risk.
+Accordingly, the production engine does not rely on the empirical tail alone: its
+crisis-regime structure, drawdown-conditional blend, and operator-configurable loss
+floor are designed to extend the simulated distribution into the region that the
+backtest identifies as beyond historical reach. The appropriate deployment is
+therefore to apply the engine as calibrated here for ordinary risk measurement and
+to engage the crisis overlay when sizing for systemic scenarios.
 
 % =============================================================== 9 Limitations
 \section{Limitations}
@@ -730,25 +728,25 @@ and to engage the crisis overlay when you are sizing for the systemic scenarios.
 
 % =============================================================== 10 Conclusion
 \section{Conclusion and Future Work}
-The Blue Lotus engine turns a return series into a fully characterised, bootstrap-
-bounded distribution of drawdown, tail-loss and recovery outcomes, built out of
-auditable components and shipped as a reproducible production service. Under a
-strict out-of-sample protocol it is statistically well calibrated on ordinary
-market conditions --- unrejectable at either the $5\%$ or the $1\%$ tail level
-across $213$ calm cells --- while its behaviour under the nine largest crises of
-the past two decades is fully mapped out, with coverage that degrades
-monotonically in severity and a clean break only at the two great systemic shocks.
-That, we would argue, is the right thing to ask of such a tool: not that it predict
-the unprecedented, but that it be honest about where its reach ends.
+The Blue Lotus engine maps a return series to a fully characterised, bootstrap-
+bounded distribution of drawdown, tail-loss, and recovery outcomes, constructed
+from auditable components and delivered as a reproducible production service. Under
+a strict out-of-sample protocol it is statistically well calibrated under ordinary
+market conditions --- not rejectable at either the $5\%$ or the $1\%$ tail level
+across $213$ calm cells --- and its behaviour under the nine largest crises of the
+past two decades is fully characterised, with coverage that degrades monotonically
+in severity and a discrete failure only at the two most severe systemic shocks.
+This is the appropriate standard for such a system: not that it predict
+unprecedented events, but that it delineate precisely the boundary of its validity.
 
-Three extensions follow naturally. The regime detector could ingest exogenous
-stress signals --- implied volatility, credit spreads, funding indicators --- to
-sharpen crisis identification ahead of realised volatility. The multi-asset
-dependence model deserves the same out-of-sample treatment given here to the
-univariate case, validated against joint drawdown events. And the Model Fragility
-Index could itself be backtested, by asking whether high-fragility periods precede
-realised instability. In every case the standard set here is the same: measure
-the gap, and report it.
+Three extensions follow directly. The regime detector could incorporate exogenous
+stress signals --- implied volatility, credit spreads, and funding indicators ---
+to improve crisis identification in advance of realized volatility. The
+multi-asset dependence model warrants the out-of-sample treatment applied here to
+the univariate case, validated against joint drawdown events. Finally, the Model
+Fragility Index could itself be backtested, by testing whether high-fragility
+periods precede realized instability. In each case the evaluative standard is the
+one adopted throughout: quantify the residual gap, and report it.
 
 % =============================================================== References
 \begin{thebibliography}{99}
