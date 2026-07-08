@@ -8,6 +8,7 @@ class RegisterRequest(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8)
     name: Optional[str] = None
+    org_name: Optional[str] = None   # defaults to "<name>'s workspace"
 
 class LoginRequest(BaseModel):
     email: EmailStr
@@ -32,6 +33,70 @@ class UserResponse(BaseModel):
     name: Optional[str]
     plan: str
     created_at: datetime
+
+class OrgInfo(BaseModel):
+    id: str
+    name: str
+    plan: str
+    subscription_status: str
+
+class MeResponse(BaseModel):
+    id: str
+    email: str
+    name: Optional[str]
+    role: str
+    plan: str
+    is_developer: bool
+    org: OrgInfo
+
+# --- Billing -------------------------------------------------------------------
+class PlanInfo(BaseModel):
+    tier: str
+    name: str
+    price_usd: Optional[int]
+    monthly_runs: Optional[int]
+    blurb: str
+    features: List[str]
+
+class BillingStatus(BaseModel):
+    plan: str
+    plan_name: str
+    subscription_status: str
+    period: str
+    runs_used: int
+    runs_limit: Optional[int]
+    runs_remaining: Optional[int]
+    stripe_enabled: bool
+
+class CheckoutRequest(BaseModel):
+    tier: str = Field(examples=["pro", "enterprise"])
+
+class CheckoutResponse(BaseModel):
+    mode: str
+    checkout_url: str
+    message: Optional[str] = None
+
+# --- System / status -----------------------------------------------------------
+class ComponentStatus(BaseModel):
+    name: str
+    status: str            # "operational" | "degraded" | "down"
+    detail: Optional[str] = None
+
+class StatusResponse(BaseModel):
+    status: str
+    version: str
+    time: datetime
+    components: List[ComponentStatus]
+
+# --- Developer -----------------------------------------------------------------
+class DevStats(BaseModel):
+    organizations: int
+    users: int
+    runs_total: int
+    runs_24h: int
+    runs_by_status: Dict[str, int]
+    stripe_enabled: bool
+    env: str
 
 class TickerRunRequest(BaseModel):
     """Run stress test on a ticker fetched from Yahoo Finance."""

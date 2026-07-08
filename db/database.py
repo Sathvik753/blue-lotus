@@ -27,10 +27,35 @@ AsyncSessionLocal = async_sessionmaker(
 )
 
 
+# Columns added after the initial schema shipped. create_all() creates new
+# *tables* but never alters existing ones, so we add these defensively on boot.
+# Each runs in its own transaction and swallows "already exists" errors, which
+# keeps it idempotent on both fresh and previously-deployed databases.
+_ADDITIVE_COLUMNS = [
+    ("users", "org_id", "VARCHAR"),
+    ("users", "role", "VARCHAR"),
+    ("runs", "org_id", "VARCHAR"),
+    ("api_keys", "org_id", "VARCHAR"),
+    ("api_keys", "prefix", "VARCHAR"),
+]
+
+
+async def _ensure_columns():
+    from sqlalchemy import text
+    for table, column, coltype in _ADDITIVE_COLUMNS:
+        try:
+            async with engine.begin() as conn:
+                await conn.execute(text(f'ALTER TABLE {table} ADD COLUMN {column} {coltype}'))
+        except Exception:
+            # Column already exists (or table is brand-new from create_all) — fine.
+            pass
+
+
 async def init_db():
-    """Create all tables. Call once on startup."""
+    """Create all tables and apply additive column migrations. Call once on startup."""
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    await _ensure_columns()
 
 
 async def get_db():
