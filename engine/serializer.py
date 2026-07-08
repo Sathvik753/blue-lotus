@@ -31,11 +31,20 @@ def _safe(v, decimals=6):
     except Exception:
         return None
 
-def _ci(t, decimals=6):
-    """Serialize a (lo, hi) CI tuple."""
+def _ci(t, decimals=6, min_width=None):
+    """Serialize a (lo, hi) CI tuple.
+
+    When `min_width` is set and the interval is narrower than it, the band is
+    suppressed (nulled) and flagged degenerate: a near-zero-width interval
+    conveys false precision, which defeats the purpose of reporting one.
+    """
     if t is None:
         return {"lo": None, "hi": None}
-    return {"lo": _safe(t[0], decimals), "hi": _safe(t[1], decimals)}
+    lo, hi = _safe(t[0], decimals), _safe(t[1], decimals)
+    if (min_width is not None and lo is not None and hi is not None
+            and abs(hi - lo) < min_width):
+        return {"lo": None, "hi": None, "degenerate": True}
+    return {"lo": lo, "hi": hi}
 
 def serialize_run_results(mc, sm, constraints, metadata, fi, fi_grade,
                            fi_details: Optional[Dict] = None,
@@ -133,7 +142,9 @@ def serialize_run_results(mc, sm, constraints, metadata, fi, fi_grade,
             "ci_90_low":  _safe(sm.es_ci90[0]),
             "ci_90_high": _safe(sm.es_ci90[1]),
             "bootstrap_ci": {
-                "aggregate": _ci(sm.es_aggregate_ci90),
+                # Aggregate ES pools every simulated day, so its bootstrap
+                # band can collapse to near-zero width; suppress under 2bp.
+                "aggregate": _ci(sm.es_aggregate_ci90, min_width=2e-4),
                 "mean":      _ci(sm.es_mean_ci90),
             },
             "histogram": _histogram(es, bins=50),
@@ -142,7 +153,13 @@ def serialize_run_results(mc, sm, constraints, metadata, fi, fi_grade,
         "recovery": {
             "mean":          _safe(sm.recovery_mean, 2),
             "median":        _safe(sm.recovery_median, 2),
+            # Right-censored: the share of drawn-down paths that had not yet
+            # reclaimed their peak by the simulation horizon. Not a
+            # prediction of permanent loss — many would recover given more
+            # time. Kept under the legacy key for API compatibility.
             "pct_never":     _safe(sm.pct_never_recover, 4),
+            "pct_unrecovered_at_horizon": _safe(sm.pct_never_recover, 4),
+            "censored_at_horizon": True,
             "bootstrap_ci":  _ci(sm.recovery_mean_ci90, 2),
             "histogram":     _histogram(valid_rec, bins=40) if len(valid_rec) > 0 else [],
         },

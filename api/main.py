@@ -473,11 +473,9 @@ async def compare(
             ip = InputProcessor(winsorize=True, normalization="none")
             cleaned, meta = ip.fit_transform(returns)
 
-            daily_std = float(cleaned.std())
-            cl = StructuralConstraintLayer(
-                moderate_dd=-daily_std * 15, severe_dd=-daily_std * 45,
-            )
-            constraints = cl.fit(cleaned)
+            # Documented engine defaults; tail fit on raw returns.
+            cl = StructuralConstraintLayer(moderate_dd=-0.05, severe_dd=-0.15)
+            constraints = cl.fit(cleaned, raw_returns=ip.raw_returns_)
 
             mc = ConstrainedMonteCarloGenerator(n_paths=req.n_paths, horizon=req.horizon, random_seed=42)
             mc_out = mc.generate(constraints)
@@ -498,7 +496,7 @@ async def compare(
 
             rows.append(CompareRow(
                 ticker=ticker, n_observations=int(meta.n_observations),
-                ann_vol=round(float(cleaned.std() * 252**0.5), 4),
+                ann_vol=round(float(meta.ann_vol), 4),
                 dd_mean=round(float(stress.dd_mean), 6),
                 es_aggregate=round(float(stress.es_aggregate), 6),
                 pct_never_recover=round(float(stress.pct_never_recover), 4),

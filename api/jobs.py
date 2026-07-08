@@ -44,16 +44,20 @@ async def execute_run(run_id: str, returns: np.ndarray, config: dict):
 
             ip = InputProcessor(winsorize=True, normalization="none")
             cleaned, meta = ip.fit_transform(returns)
+            raw = ip.raw_returns_
 
-            daily_std = float(cleaned.std())
-            moderate_dd = -daily_std * 15
-            severe_dd = -daily_std * 45
+            # Documented engine defaults: -5% moderate / -15% severe. The old
+            # ±15σ/45σ overrides put "moderate" near -16% on an equity index,
+            # which effectively disabled the drawdown-conditional blend in
+            # production while the whitepaper described the defaults.
+            moderate_dd = -0.05
+            severe_dd = -0.15
 
             cl = StructuralConstraintLayer(
                 moderate_dd=moderate_dd,
                 severe_dd=severe_dd,
             )
-            constraints = cl.fit(cleaned)
+            constraints = cl.fit(cleaned, raw_returns=raw)
 
             mc_gen = ConstrainedMonteCarloGenerator(
                 n_paths=config.get("n_paths", 10_000),
@@ -70,7 +74,9 @@ async def execute_run(run_id: str, returns: np.ndarray, config: dict):
                 ck = dict(moderate_dd=moderate_dd, severe_dd=severe_dd)
                 mk = dict(n_paths=config.get("n_paths", 10_000), horizon=config.get("horizon", 252))
                 fi, fi_grade, fi_details = compute_fragility_index(
-                    cleaned, ck, mk, n_paths=min(2_000, config.get("n_paths", 10_000))
+                    cleaned, ck, mk,
+                    n_paths=min(2_000, config.get("n_paths", 10_000)),
+                    raw_returns=raw,
                 )
 
             backtest_results = []
@@ -78,7 +84,9 @@ async def execute_run(run_id: str, returns: np.ndarray, config: dict):
             if raw_dates is not None:
                 try:
                     bv = BacktestValidator()
-                    backtest_results = bv.validate(cleaned, raw_dates, stress)
+                    # Raw returns: realized drawdowns must include the actual
+                    # worst days, not winsorized ones.
+                    backtest_results = bv.validate(raw, raw_dates, stress)
                 except Exception:
                     pass
 
@@ -100,7 +108,7 @@ async def execute_run(run_id: str, returns: np.ndarray, config: dict):
                 pct_never_recover=float(stress.pct_never_recover),
                 fragility_index=float(fi) if fi is not None else None,
                 fragility_grade=fi_grade,
-                ann_vol=float(cleaned.std() * (252 ** 0.5)),
+                ann_vol=float(meta.ann_vol),   # raw (pre-winsorize) volatility
                 payload=payload,
             )
             db.add(db_result)

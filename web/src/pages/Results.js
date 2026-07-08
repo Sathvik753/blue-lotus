@@ -264,12 +264,32 @@ export default function Results() {
   const recBci = rec?.bootstrap_ci || {};
 
   const fragGrade = frag?.grade || "—";
-  const fragColor = fragGrade === "Robust" ? TEAL : fragGrade === "Moderate" ? GOLD : ROSE;
+  const fragColor = fragGrade === "Robust" ? TEAL
+    : fragGrade === "Moderate" ? GOLD
+    : fragGrade === "Fragile" ? ROSE
+    : MUTED;
   const fragDesc = fragGrade === "Robust"
     ? "Estimates stay consistent when model inputs are nudged."
     : fragGrade === "Moderate"
     ? "Some sensitivity to input parameters."
-    : "Risk estimates shift noticeably with small input changes. Interpret with caution.";
+    : fragGrade === "Fragile"
+    ? "Risk estimates shift noticeably with small input changes. Interpret with caution."
+    : "The stability diagnostic did not complete for this run.";
+
+  // Percentage shares that are guaranteed to sum to exactly 100.0 —
+  // independent rounding of each share can drift to 100.1 / 99.9.
+  const shareTotal = (sc.normal || 0) + (sc.stress || 0) + (sc.crisis || 0);
+  const rawShares = ["normal", "stress", "crisis"].map(k =>
+    shareTotal > 0 ? ((sc[k] || 0) / shareTotal) * 1000 : 0);
+  const floored = rawShares.map(Math.floor);
+  let leftover = 1000 - floored.reduce((a, b) => a + b, 0);
+  const order = rawShares.map((v, i) => [v - floored[i], i]).sort((a, b) => b[0] - a[0]);
+  for (let j = 0; j < order.length && leftover > 0; j++, leftover--) floored[order[j][1]] += 1;
+  const shares = {
+    normal: (floored[0] / 10).toFixed(1),
+    stress: (floored[1] / 10).toFixed(1),
+    crisis: (floored[2] / 10).toFixed(1),
+  };
 
   const wassDetails = frag?.details || {};
   const wassMax = Object.values(wassDetails).length > 0
@@ -353,11 +373,13 @@ export default function Results() {
             {rec?.mean ? `${Math.round(rec.mean)} days` : "—"}
           </div>
           <CiBadge lo={recBci?.lo} hi={recBci?.hi} isDay={true} />
-          <span className="metric-badge badge-red" style={{ marginTop: 8 }}>
-            {(rec?.pct_never * 100).toFixed(1)}% never recover within {sim?.horizon} days
+          <span className="metric-badge badge-gold" style={{ marginTop: 8 }}>
+            {(rec?.pct_never * 100).toFixed(1)}% still below peak at day {sim?.horizon}
           </span>
           <div style={{ fontSize: 11, color: MUTED, marginTop: 6, lineHeight: 1.4 }}>
-            Time to get back to the previous high.
+            Time to reclaim the previous high, among paths that drew down.
+            Paths still underwater when the simulation ends are cut off by the
+            horizon — not predicted to be permanent losses.
           </div>
         </div>
 
@@ -395,14 +417,14 @@ export default function Results() {
             </thead>
             <tbody>
               {[
-                ["Normal", sc.normal, TEAL, "Drawdown stays within a typical range"],
-                ["Stress", sc.stress, GOLD, "Moderate drawdown — elevated but manageable"],
-                ["Crisis", sc.crisis, ROSE, "Severe drawdown — significant loss scenario"],
-              ].map(([name, count, color, desc]) => (
+                ["Normal", sc.normal, shares.normal, TEAL, "Drawdown stays within a typical range"],
+                ["Stress", sc.stress, shares.stress, GOLD, "Moderate drawdown — elevated but manageable"],
+                ["Crisis", sc.crisis, shares.crisis, ROSE, "Severe drawdown — significant loss scenario"],
+              ].map(([name, count, share, color, desc]) => (
                 <tr key={name}>
                   <td><span style={{ color, fontWeight: 600 }}>● </span>{name}</td>
                   <td className="mono">{count?.toLocaleString() || 0}</td>
-                  <td className="mono">{count && sim?.n_paths ? ((count / sim.n_paths) * 100).toFixed(1) + "%" : "—"}</td>
+                  <td className="mono">{shareTotal > 0 ? share + "%" : "—"}</td>
                   <td style={{ fontSize: 11, color: MUTED }}>{desc}</td>
                 </tr>
               ))}
@@ -552,7 +574,7 @@ export default function Results() {
             <WassersteinRow key={name} name={name} value={val} max={wassMax} />
           ))}
           <div style={{ marginTop: 12, fontSize: 11, color: MUTED }}>
-            MFI = average W₁ / |ES baseline| = {frag?.index?.toFixed(4)} ({fragGrade})
+            MFI = average W₁ / σ(baseline drawdown) = {frag?.index != null ? frag.index.toFixed(4) : "unavailable"} ({fragGrade})
           </div>
         </Collapsible>
       )}

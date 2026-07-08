@@ -1,4 +1,14 @@
-"""Blue Lotus Labs — Institutional Stress-Testing Engine v3.0."""
+"""Blue Lotus Labs — Institutional Stress-Testing Engine v3.1.
+
+v3.1 corrects a set of systematic biases found in review, all of which leaned
+optimistic: EVT tails are now fit on raw (pre-winsorization) losses; the
+bottom-1% path rejection is removed; the Esscher tilt constraints are stated
+in consistent daily units (previously unsolvable, so the tilt never engaged);
+identity-weight resampling no longer bootstrap-duplicates paths; regime paths
+stay row-aligned with return paths through resampling; drawdowns compound
+(bounded by -100%) instead of summing; client risk limits stop paths out
+rather than deleting them; and realized backtest drawdowns use raw returns.
+"""
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -54,6 +64,7 @@ class InputProcessor:
         self.mean_ = None
         self.std_ = None
         self.metadata_ = None
+        self.raw_returns_ = None
 
     def fit_transform(self, returns):
         returns = np.asarray(returns, dtype=float)
@@ -63,8 +74,13 @@ class InputProcessor:
             warnings.warn(f"Only {len(returns)} observations — high uncertainty.", UserWarning)
 
         returns = returns[~np.isnan(returns)]
+        # Keep the untouched series: the tail module and the backtest validator
+        # must see real extremes, not winsorized ones.
+        self.raw_returns_ = returns.copy()
         raw_mean = float(np.mean(returns))
         raw_std = float(np.std(returns, ddof=1))
+        raw_min = float(np.min(returns))
+        raw_max = float(np.max(returns))
         mu, sig = raw_mean, raw_std
         raw_skew = float(np.mean(((returns - mu) / (sig + 1e-12)) ** 3))
         raw_kurt = float(np.mean(((returns - mu) / (sig + 1e-12)) ** 4)) - 3.0
@@ -94,8 +110,8 @@ class InputProcessor:
             raw_std = raw_std,
             raw_skewness = raw_skew,
             raw_kurtosis = raw_kurt,
-            min_return = float(np.min(returns)),
-            max_return = float(np.max(returns)),
+            min_return = raw_min,
+            max_return = raw_max,
             ann_vol = ann_vol,
             winsorized = self.winsorize,
             normalization = norm_lbl,
@@ -510,7 +526,10 @@ class DrawdownConditioningLayer:
         self.severe_threshold = severe_threshold
 
     def fit(self, returns):
-        dd = np.cumsum(returns) - np.maximum.accumulate(np.cumsum(returns))
+        # Compounded wealth drawdown: bounded below by -100%, matches how a
+        # practitioner reads a drawdown number.
+        wealth = np.cumprod(1.0 + returns)
+        dd = wealth / np.maximum.accumulate(wealth) - 1.0
         states = np.zeros(len(returns), dtype=int)
         states[dd < self.moderate_threshold] = 1
         states[dd < self.severe_threshold] = 2
@@ -568,11 +587,24 @@ class StructuralConstraintLayer:
         self.implied_vol = implied_vol
         self.known_risk_limit = known_risk_limit
 
-    def fit(self, returns):
+    def fit(self, returns, raw_returns=None):
+        """Fit all sub-layers.
+
+        `returns` is the (possibly winsorized) series used for bulk-moment
+        estimation: regime detection and Bayesian shrinkage, where clipping a
+        handful of outliers stabilises the estimates.
+
+        `raw_returns`, when provided, is the untouched series. The tail layer
+        and the drawdown-conditioning layer are fit on it: winsorizing before
+        an EVT fit bounds the exceedances by construction (forcing a negative
+        GPD shape), and clipping crisis days mutes exactly the stress moments
+        the drawdown blend exists to reproduce.
+        """
+        tail_input = raw_returns if raw_returns is not None else returns
         regime = self.regime_model.fit(returns)
-        tail = self.tail_layer.fit(returns)
+        tail = self.tail_layer.fit(tail_input)
         bayes = self.bayes_layer.fit(regime, returns)
-        drawdown = self.dd_layer.fit(returns)
+        drawdown = self.dd_layer.fit(tail_input)
 
         return ConstraintLayerOutput(
             regime = regime,
@@ -626,50 +658,78 @@ def _perturb_constraints(c: ConstraintLayerOutput,
         known_risk_limit = c.known_risk_limit,
     )
 
-def solve_lambdas(r: np.ndarray, mu_target: float,
+def _esscher_exposures(paths: np.ndarray, alpha: float = 0.05):
+    """Per-path exposures for the Esscher tilt, all in daily-return units.
+
+    Returns (rbar, tail_mean, tail_sum, tail_count) where the tail is defined
+    by the pooled daily VaR under the historical measure. Keeping everything
+    in daily units is what makes the ES constraint dimensionally consistent
+    with the EVT target (which is a daily ES).
+    """
+    rbar = paths.mean(axis=1)
+    q_daily = np.quantile(paths.flatten(), alpha)
+    tail_mask = paths <= q_daily
+    tail_sum = (paths * tail_mask).sum(axis=1)
+    tail_count = tail_mask.sum(axis=1)
+    tail_mean = np.where(tail_count > 0, tail_sum / np.maximum(tail_count, 1), q_daily)
+    return rbar, tail_mean, tail_sum, tail_count
+
+
+def solve_lambdas(paths: np.ndarray, mu_target: float,
                   es_target: float, alpha: float = 0.05) -> Tuple[float, float]:
     """
     Find Lagrange multipliers (λ₁, λ₂) for the Esscher measure Q satisfying:
 
-        E_Q[r]              = μ_target    (mean constraint)
-        E_Q[r | r ≤ VaR_α] = ES_target   (ES constraint)
+        E_Q[r̄]                       = μ_target   (daily mean constraint)
+        pooled daily ES under Q       = ES_target  (daily tail constraint)
 
-    Tilted weight:  w_i ∝ exp(λ₁·rᵢ + λ₂·rᵢ·𝟙[rᵢ ≤ VaR_α])
+    Tilted weight:  w_i ∝ exp(λ₁·r̄ᵢ + λ₂·tᵢ)  where r̄ᵢ is path i's mean
+    daily return and tᵢ is the mean of its below-VaR daily returns.
 
-    Robustness improvements over v2.0:
-        1. Five starting points: searches for the global minimum
-        2. Solution with the smallest residual norm is selected
-        3. Convergence check: residual > 1e-4 triggers a warning and
-           identity-weight fallback rather than silently using bad lambdas
+    Both constraints and both exposures are in daily-return units. (The
+    previous formulation compared a daily ES target against the tail of the
+    *path-mean* distribution — quantities on scales ~25x apart — which made
+    the system unsolvable and permanently disabled the tilt.)
 
     Reference: Gerber & Shiu (1994), Transactions of the Society of Actuaries.
-
     Falls back to identity weights (λ₁ = λ₂ = 0) if convergence fails.
     """
-    var = np.quantile(r, alpha)
-    tail_mask = r <= var
+    rbar, tail_mean, tail_sum, tail_count = _esscher_exposures(paths, alpha)
 
-    r_scale = np.std(r)
-    if r_scale < 1e-12:
+    r_scale = np.std(rbar)
+    t_scale = np.std(tail_mean)
+    if r_scale < 1e-12 or t_scale < 1e-12:
         return 0.0, 0.0
 
-    r_s = r / r_scale
-    mu_s = mu_target / r_scale
-    es_s = es_target / r_scale
+    # Path-level reweighting can only move each constraint within the convex
+    # hull of the per-path exposures. An EVT target beyond the worst path's
+    # tail mean is unreachable by construction; clamp to just inside the hull
+    # so the tilt moves as far toward the target as the sample allows, rather
+    # than failing outright and reverting to identity.
+    es_reach_lo = float(np.quantile(tail_mean, 0.005))
+    if es_target < es_reach_lo:
+        logger.info("Esscher ES target %.4f beyond reachable %.4f — clamping.",
+                    es_target, es_reach_lo)
+        es_target = es_reach_lo
+    mu_lo, mu_hi = float(np.quantile(rbar, 0.005)), float(np.quantile(rbar, 0.995))
+    mu_target = float(np.clip(mu_target, mu_lo, mu_hi))
+
+    r_s = rbar / r_scale
+    t_s = tail_mean / t_scale
 
     def F(lam):
         lam1, lam2 = lam
-        log_w = lam1 * r_s + lam2 * r_s * tail_mask
+        log_w = lam1 * r_s + lam2 * t_s
         log_w -= log_w.max()
         w = np.exp(log_w);  w /= w.sum()
 
-        mean_eq = np.dot(r_s, w) - mu_s
+        mean_eq = (np.dot(rbar, w) - mu_target) / r_scale
 
-        w_tail = w[tail_mask]
-        r_tail = r_s[tail_mask]
-        if w_tail.sum() < 1e-12:
+        denom = np.dot(tail_count, w)
+        if denom < 1e-12:
             return [mean_eq, 0.0]
-        es_eq = np.dot(r_tail, w_tail) / w_tail.sum() - es_s
+        es_q = np.dot(tail_sum, w) / denom
+        es_eq = (es_q - es_target) / t_scale
         return [mean_eq, es_eq]
 
     starting_points = [
@@ -710,25 +770,31 @@ def solve_lambdas(r: np.ndarray, mu_target: float,
 
     return lam1, lam2
 
-def resample_paths(paths: np.ndarray, lam1: float, lam2: float,
-                   alpha: float = 0.05,
-                   rng: Optional[np.random.Generator] = None) -> np.ndarray:
+
+def resample_indices(paths: np.ndarray, lam1: float, lam2: float,
+                     alpha: float = 0.05,
+                     rng: Optional[np.random.Generator] = None) -> Optional[np.ndarray]:
     """
-    Importance-resample paths using Esscher weights.
-    Returns paths drawn from the tilted measure Q (with replacement).
+    Importance-resample under the Esscher tilt; returns the chosen row indices
+    so the caller can reindex *every* per-path array consistently
+    (paths, regime paths, and anything else that must stay row-aligned).
+
+    Returns None for identity weights — resampling with uniform weights is a
+    plain bootstrap that duplicates ~37% of paths and adds nothing but noise.
     """
+    if lam1 == 0.0 and lam2 == 0.0:
+        return None
     if rng is None:
         rng = np.random.default_rng()
 
-    r = paths.mean(axis=1)
-    var = np.quantile(r, alpha)
-    tail_mask = r <= var
-    log_w = lam1 * r + lam2 * r * tail_mask
-    log_w    -= log_w.max()
+    rbar, tail_mean, _, _ = _esscher_exposures(paths, alpha)
+    r_scale = np.std(rbar) + 1e-12
+    t_scale = np.std(tail_mean) + 1e-12
+    log_w = lam1 * rbar / r_scale + lam2 * tail_mean / t_scale
+    log_w -= log_w.max()
     w = np.exp(log_w);  w /= w.sum()
 
-    idx = rng.choice(len(paths), size=len(paths), replace=True, p=w)
-    return paths[idx]
+    return rng.choice(len(paths), size=len(paths), replace=True, p=w)
 
 @dataclass
 class MonteCarloOutput:
@@ -744,11 +810,15 @@ class MonteCarloOutput:
 class ConstrainedMonteCarloGenerator:
     """
     Generates stress-test paths via:
-      1. Markov regime switching using HMM transition matrix and
+      1. Markov regime switching using the regime transition matrix and
          Bayesian-shrunk emission parameters
-      2. Drawdown-conditional return blending
+      2. Drawdown-conditional return blending (compounded-wealth states)
       3. Esscher importance resampling to enforce mean and ES constraints
-      4. Hard rejection of bottom-1% outlier paths
+         (skipped entirely when the tilt is identity)
+
+    All n_paths are retained: no post-hoc rejection. Earlier versions deleted
+    the bottom-1% most extreme paths before measurement, which biased every
+    tail statistic optimistically.
 
     Each instance owns its own np.random.Generator (thread-safe).
     """
@@ -778,9 +848,10 @@ class ConstrainedMonteCarloGenerator:
         crisis_idx = rng.choice(self.n_paths, n_crisis, replace=False)
         current_regimes[crisis_idx] = 2
 
-        cumulative = np.zeros(self.n_paths)
-        running_max_per_path = np.zeros(self.n_paths)
+        wealth = np.ones(self.n_paths)
+        running_peak = np.ones(self.n_paths)
         current_dd_states = np.zeros(self.n_paths, dtype=int)
+        stopped = np.zeros(self.n_paths, dtype=bool)
         mod_thr, sev_thr = constraints.drawdown.thresholds
 
         for t in range(self.horizon):
@@ -808,45 +879,43 @@ class ConstrainedMonteCarloGenerator:
                         + w * rng.normal(dd_cp[s]["mean"], dd_cp[s]["std"], mask.sum())
                     )
 
-            # Drawdown floor clamp: paths that have already lost more than
-            # `drawdown_floor` (e.g. -70%) cannot lose further — they are
-            # treated as stopped out.  This prevents runaway compounding in
-            # tail paths and keeps the simulation physically realistic.
-            floor_hit = cumulative <= self.drawdown_floor
-            returns_t[floor_hit] = 0.0
+            # Stop-outs freeze a path rather than delete it. Deleting censors
+            # exactly the scenarios where a stop fails; frozen paths stay in
+            # the sample and keep their realized loss.
+            returns_t[stopped] = 0.0
 
             paths[:, t] = returns_t
-            cumulative += returns_t
-            cumulative = np.maximum(cumulative, self.drawdown_floor)
+            wealth *= (1.0 + returns_t)
+            running_peak = np.maximum(running_peak, wealth)
+            dd = wealth / running_peak - 1.0
 
-            running_max_per_path = np.maximum(running_max_per_path, cumulative)
-            dd = cumulative - running_max_per_path
+            # Loss floor: cumulative wealth loss beyond `drawdown_floor`
+            # (e.g. -70%) means the position is stopped out from here on.
+            stopped |= (wealth - 1.0) <= self.drawdown_floor
+            # Client-declared risk limit behaves the same way: a stop-out at
+            # the limit, not removal from the distribution.
+            if constraints.known_risk_limit is not None:
+                stopped |= dd <= constraints.known_risk_limit
+
             current_dd_states = np.where(dd < sev_thr, 2, np.where(dd < mod_thr, 1, 0))
 
-        mu_target = float(np.mean(constraints.bayes.regime_means))
+        # Esscher tilt: μ target is the stationary-weighted regime mean (the
+        # long-run daily mean of the switching process), and the ES target is
+        # matched in pooled daily units inside solve_lambdas.
+        pi = constraints.regime.stationary_dist
+        mu_target = float(np.dot(pi, constraints.bayes.regime_means))
         es_target = constraints.tail.es_target
-        r = paths.mean(axis=1)
-        lam1, lam2 = solve_lambdas(r, mu_target, es_target,
-                                    alpha=constraints.tail.alpha)
-        paths = resample_paths(paths, lam1, lam2,
-                               alpha=constraints.tail.alpha, rng=rng)
-
         alpha = constraints.tail.alpha
-        path_q = np.quantile(paths, alpha, axis=1)
-        cutoff = np.percentile(path_q, 1)
-        mask = path_q >= cutoff
+        lam1, lam2 = solve_lambdas(paths, mu_target, es_target, alpha=alpha)
 
-        if constraints.known_risk_limit is not None:
-            cum = np.cumsum(paths, axis=1)
-            max_dd = np.min(cum - np.maximum.accumulate(cum, axis=1), axis=1)
-            mask &= max_dd >= constraints.known_risk_limit
+        idx = resample_indices(paths, lam1, lam2, alpha=alpha, rng=rng)
+        if idx is not None:
+            paths = paths[idx]
+            regime_paths = regime_paths[idx]
 
-        paths = paths[mask]
-        regime_paths = regime_paths[mask]
-        rejection_rate = 1.0 - mask.sum() / self.n_paths
-
-        cum = np.cumsum(paths, axis=1)
-        max_dd = np.min(cum - np.maximum.accumulate(cum, axis=1), axis=1)
+        # Scenario labels from compounded max drawdown.
+        w_mat = np.cumprod(1.0 + paths, axis=1)
+        max_dd = np.min(w_mat / np.maximum.accumulate(w_mat, axis=1) - 1.0, axis=1)
         path_vol = paths.std(axis=1).mean()
         thr_normal = -path_vol * 10
         thr_stress = -path_vol * 25
@@ -861,7 +930,7 @@ class ConstrainedMonteCarloGenerator:
             scenario_labels = labels,
             n_paths = len(paths),
             horizon = self.horizon,
-            rejection_rate = rejection_rate,
+            rejection_rate = 0.0,   # kept for API compatibility; nothing is rejected
             lam1 = lam1,
             lam2 = lam2,
         )
@@ -926,9 +995,9 @@ class StressMetricsEngine:
             idx = rng.choice(n, size=n, replace=True)
             s = paths[idx]
 
-            # Max drawdown
-            cum = np.cumsum(s, axis=1)
-            dd = cum - np.maximum.accumulate(cum, axis=1)
+            # Max drawdown (compounded wealth)
+            cum = np.cumprod(1.0 + s, axis=1)
+            dd = cum / np.maximum.accumulate(cum, axis=1) - 1.0
             max_dd = dd.min(axis=1)
             dd_means.append(float(max_dd.mean()))
             dd_p5s.append(float(np.percentile(max_dd, 5)))
@@ -945,12 +1014,13 @@ class StressMetricsEngine:
             aq = np.quantile(all_r, alpha)
             es_aggs.append(float(np.mean(all_r[all_r <= aq])))
 
-            # Recovery (simplified: fraction never recovering × mean horizon)
+            # Recovery: trough-to-peak reclaim time among paths that actually
+            # drew down. Paths with no drawdown are excluded (they have
+            # nothing to recover from), not counted as 0-day recoveries.
             rec = np.full(len(s), np.nan)
             for i in range(len(s)):
                 t_dd = int(np.argmin(dd[i]))
                 if dd[i, t_dd] >= 0:
-                    rec[i] = 0
                     continue
                 peak = np.maximum.accumulate(cum[i])[t_dd]
                 post = cum[i, t_dd:]
@@ -982,9 +1052,10 @@ class StressMetricsEngine:
         paths, labels, regimes = mc.paths, mc.scenario_labels, mc.regime_paths
         alpha = self.es_alpha
 
-        # Drawdown
-        cum = np.cumsum(paths, axis=1)
-        dd = cum - np.maximum.accumulate(cum, axis=1)
+        # Drawdown on compounded wealth: bounded below by -100% and directly
+        # comparable to how practitioners quote drawdowns.
+        cum = np.cumprod(1.0 + paths, axis=1)
+        dd = cum / np.maximum.accumulate(cum, axis=1) - 1.0
         max_dd = dd.min(axis=1)
         dd_by_sc = {
             s: float(max_dd[labels == s].mean()) if (labels == s).sum() > 0 else float("nan")
@@ -1004,23 +1075,31 @@ class StressMetricsEngine:
         agg_q = np.quantile(all_r, alpha)
         agg_es = float(np.mean(all_r[all_r <= agg_q]))
 
-        # Worst-k paths
-        total_r = paths.sum(axis=1)
+        # Worst-k paths by compounded total return
+        total_r = cum[:, -1] - 1.0
         worst_idx = np.argsort(total_r)[: self.k_worst]
 
-        # Recovery
+        # Recovery: only paths that actually drew down participate. Paths
+        # with no drawdown are excluded outright; paths that drew down but
+        # had not reclaimed their peak by the horizon stay NaN and are
+        # counted as unrecovered-at-horizon (right-censored, not doomed).
         recovery = np.full(len(paths), np.nan)
+        drew_down = np.zeros(len(paths), dtype=bool)
         for i in range(len(paths)):
             t_dd = int(np.argmin(dd[i]))
             if dd[i, t_dd] >= 0:
-                recovery[i] = 0
                 continue
+            drew_down[i] = True
             peak = np.maximum.accumulate(cum[i])[t_dd]
             post = cum[i, t_dd:]
             rec = np.where(post >= peak)[0]
             if len(rec) > 0:
                 recovery[i] = float(rec[0])
         valid = recovery[~np.isnan(recovery)]
+        n_drew_down = int(drew_down.sum())
+        pct_unrecovered = (
+            float(np.isnan(recovery[drew_down]).mean()) if n_drew_down > 0 else 0.0
+        )
 
         # Regime statistics
         rm, re, rf = {}, {}, {}
@@ -1062,7 +1141,7 @@ class StressMetricsEngine:
             recovery_dist = recovery,
             recovery_mean = float(valid.mean()) if len(valid) > 0 else float("nan"),
             recovery_median = float(np.median(valid)) if len(valid) > 0 else float("nan"),
-            pct_never_recover = float(np.isnan(recovery).mean()),
+            pct_never_recover = pct_unrecovered,
             recovery_mean_ci90 = bci["rec_mean"],
             regime_means = rm,
             regime_es = re,
@@ -1158,8 +1237,10 @@ class MultiAssetConstraintLayer:
             z = rng.normal(0, 1, (n_paths, N))
             asset_paths[:, t, :] = means + (L @ z.T).T
 
-        # Scale crisis paths
-        asset_paths[crisis_idx] *= self.crisis_vol_scale
+        # Scale crisis paths: amplify the *deviations* around the mean, not
+        # the raw returns — scaling raw returns would inflate the drift too,
+        # making positive crisis paths more positive.
+        asset_paths[crisis_idx] = means + self.crisis_vol_scale * (asset_paths[crisis_idx] - means)
 
         # Portfolio aggregation
         portfolio_paths = (asset_paths * weights).sum(axis=2)
@@ -1167,10 +1248,12 @@ class MultiAssetConstraintLayer:
         # Optionally compute stress metrics on portfolio
         metrics = None
         if run_metrics:
+            scenario_labels = np.full(n_paths, "normal", dtype=object)
+            scenario_labels[crisis_idx] = "crisis"
             mc_dummy = MonteCarloOutput(
                 paths = portfolio_paths,
                 regime_paths = np.zeros((n_paths, horizon), dtype=int),
-                scenario_labels = np.full(n_paths, "normal"),
+                scenario_labels = scenario_labels,
                 n_paths = n_paths,
                 horizon = horizon,
                 rejection_rate = 0.0,
@@ -1254,12 +1337,15 @@ def compute_fragility_index(returns, constraint_kwargs, mc_kwargs,
     grade  : str           "Robust" | "Moderate" | "Fragile" | "Unknown"
     details: dict          W₁ distance per perturbation name
     """
-    # Fit baseline constraints
+    # Fit baseline constraints. `returns` is expected to already be the
+    # engine's cleaned series — re-processing here would winsorize twice and
+    # shave the tails a second time, which is exactly the kind of silent
+    # drift that made the MFI disagree with the headline run.
     try:
-        ip = InputProcessor()
-        cleaned, _ = ip.fit_transform(returns)
+        cleaned = np.asarray(returns, dtype=float)
+        raw = kwargs.get("raw_returns")
         cl = StructuralConstraintLayer(**constraint_kwargs)
-        c_base = cl.fit(cleaned)
+        c_base = cl.fit(cleaned, raw_returns=raw)
 
         mc_kw = {**mc_kwargs, "n_paths": n_paths, "random_seed": 42}
         mc_base = ConstrainedMonteCarloGenerator(**mc_kw)
@@ -1271,7 +1357,9 @@ def compute_fragility_index(returns, constraint_kwargs, mc_kwargs,
         base_dd_std = float(np.std(base_dd))
     except Exception as e:
         logger.warning("MFI baseline run failed: %s", e)
-        return 0.5, "Unknown", {}
+        # None, not a midscale placeholder: a failed diagnostic must not
+        # masquerade as a real score.
+        return None, "Unavailable", {}
 
     # Perturbation set
     perturbations = [
@@ -1297,7 +1385,7 @@ def compute_fragility_index(returns, constraint_kwargs, mc_kwargs,
             logger.warning("MFI perturbation '%s' failed: %s", name, e)
 
     if len(details) < 2:
-        return 0.5, "Unknown", details
+        return None, "Unavailable", details
 
     avg_w = float(np.mean(list(details.values())))
     fi = float(np.clip(avg_w / (base_dd_std + 1e-12), 0, 2))
@@ -1387,9 +1475,10 @@ class BacktestValidator:
 
             period_r = returns[mask]
 
-            # Realized max drawdown
-            cum = np.cumsum(period_r)
-            dd = cum - np.maximum.accumulate(cum)
+            # Realized max drawdown, compounded — same convention as the
+            # simulated side, so the coverage comparison is like-for-like.
+            cum = np.cumprod(1.0 + period_r)
+            dd = cum / np.maximum.accumulate(cum) - 1.0
             real_maxdd = float(dd.min())
 
             # Realized tail loss (ES)
@@ -1468,8 +1557,8 @@ def plot_dashboard(mc, sm, meta, strategy_name="Strategy", fi=None, fi_grade=Non
 
     paths = mc.paths
     labels = mc.scenario_labels
-    cum = np.cumsum(paths, axis=1)
-    dd_ser = cum - np.maximum.accumulate(cum, axis=1)
+    cum = np.cumprod(1.0 + paths, axis=1)
+    dd_ser = cum / np.maximum.accumulate(cum, axis=1) - 1.0
     T, x = paths.shape[1], np.arange(paths.shape[1])
     scale = 100 if is_pct else 1
     ylbl = "Drawdown (%)" if is_pct else f"Drawdown ({unit})"
@@ -1542,7 +1631,7 @@ def plot_dashboard(mc, sm, meta, strategy_name="Strategy", fi=None, fi_grade=Non
     k = len(sm.worst_paths)
     cols = plt.cm.Reds(np.linspace(0.4, 0.9, k))
     for i, path in enumerate(sm.worst_paths):
-        ax.plot(np.cumsum(path) * scale, color=cols[i], alpha=0.85, lw=1.0)
+        ax.plot((np.cumprod(1.0 + path) - 1.0) * scale, color=cols[i], alpha=0.85, lw=1.0)
     ax.set_title(f"Worst-{k} Paths (Cumulative Return)", color=BL_LIGHT)
     ax.set_xlabel("Step"); ax.set_ylabel(f"Cumulative Return (%)"); ax.grid(True)
 
@@ -1703,11 +1792,12 @@ class BlueLotusEngine:
 
         print("▶ Module 1: Input Processing...")
         cleaned, meta = self.ip.fit_transform(np.asarray(returns, dtype=float))
+        raw = self.ip.raw_returns_
         print(f"   n={meta.n_observations}  mean={meta.raw_mean:.6f}  "
               f"std={meta.raw_std:.6f}  ann_vol={meta.ann_vol:.2%}")
 
         print("▶ Module 2: Structural Constraints (vol-regime + GPD)...")
-        constraints = self.cl.fit(cleaned)
+        constraints = self.cl.fit(cleaned, raw_returns=raw)
         pi = constraints.regime.stationary_dist
         tail = constraints.tail
         labels = constraints.regime.regime_labels
@@ -1736,16 +1826,23 @@ class BlueLotusEngine:
         if self.run_sensitivity:
             print("▶ Module 5: Model Fragility Index (Wasserstein)...")
             fi, fi_grade, fi_details = compute_fragility_index(
-                cleaned, self._ck, self._mk, n_paths=min(2_000, self._mk["n_paths"])
+                cleaned, self._ck, self._mk,
+                n_paths=min(2_000, self._mk["n_paths"]),
+                raw_returns=raw,
             )
-            print(f"   MFI = {fi:.4f}  ({fi_grade})")
+            if fi is not None:
+                print(f"   MFI = {fi:.4f}  ({fi_grade})")
+            else:
+                print(f"   MFI unavailable ({fi_grade})")
             for name, w in fi_details.items():
                 print(f"   {name:<26}  W₁ = {w:.6f}")
 
         backtest_results = []
         if self.run_backtest and dates is not None:
             print("▶ Module 5b: Historical Backtest Validation...")
-            backtest_results = self.bt.validate(cleaned, dates, stress)
+            # Raw returns: realized crisis drawdowns must include the actual
+            # worst days, not their winsorized stand-ins.
+            backtest_results = self.bt.validate(raw, dates, stress)
             for br in backtest_results:
                 status = "COVERED" if br.dd_covered else "MISSED"
                 print(f"   {br.period_label:<32}  {status}  "
