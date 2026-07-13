@@ -48,9 +48,22 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             return fwd.split(",")[0].strip()
         return request.client.host if request.client else "unknown"
 
+    def _is_developer_request(self, request: Request) -> bool:
+        """Developer traffic is exempt. The `dev` claim is baked into the JWT
+        at issue time and the decode verifies the signature, so this costs no
+        database round-trip and cannot be forged."""
+        auth = request.headers.get("authorization", "")
+        if not auth.lower().startswith("bearer "):
+            return False
+        from api.auth import decode_token
+        payload = decode_token(auth[7:].strip())
+        return bool(payload and payload.get("dev"))
+
     async def dispatch(self, request: Request, call_next):
         path = request.url.path
         if request.method == "OPTIONS" or path.startswith(_EXEMPT_PREFIXES):
+            return await call_next(request)
+        if self._is_developer_request(request):
             return await call_next(request)
 
         now = time.time()

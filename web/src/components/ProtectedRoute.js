@@ -22,11 +22,11 @@ export function ProtectedRoute({ children }) {
   return children;
 }
 
-// Requires developer access on top of authentication.
+// Requires sign-in; the Developer page itself handles the unlock flow for
+// accounts that don't have the role yet.
 export function DeveloperRoute({ children }) {
   const { user, loading } = useAuth();
   if (loading) return <Splash label="Loading…" />;
   if (!user) return <Navigate to="/login" replace />;
-  if (!user.is_developer) return <Navigate to="/run" replace />;
   return children;
 }

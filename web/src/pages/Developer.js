@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { api } from "../utils/api";
-import { Terminal } from "lucide-react";
+import { api, setToken } from "../utils/api";
+import { useAuth } from "../context/Auth";
+import { Terminal, Lock } from "lucide-react";
 
 function Stat({ label, value }) {
   return (
@@ -11,15 +12,71 @@ function Stat({ label, value }) {
   );
 }
 
+
+function UnlockGate() {
+  const { refresh } = useAuth();
+  const [code, setCode] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function submit(e) {
+    e.preventDefault();
+    setError(""); setBusy(true);
+    const res = await api.post("/auth/developer/unlock", { code: code.trim() });
+    setBusy(false);
+    if (!res.ok) {
+      setError(res.data?.detail || "Unlock failed.");
+      return;
+    }
+    // Fresh token carries the developer claim (rate-limit + quota exempt).
+    setToken(res.data.access_token);
+    await refresh();
+  }
+
+  return (
+    <div className="fade-in" style={{ maxWidth: 420, margin: "60px auto" }}>
+      <div className="card" style={{ textAlign: "center" }}>
+        <Lock size={26} color="var(--gold)" style={{ marginBottom: 12 }} />
+        <h1 style={{ fontSize: 20, marginBottom: 6 }}>Developer access</h1>
+        <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 20 }}>
+          This area is restricted. Enter the access code to unlock the
+          developer console for your account.
+        </p>
+        <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <input
+            type="password" value={code} onChange={e => setCode(e.target.value)}
+            placeholder="Access code" autoFocus
+            style={{ textAlign: "center", fontFamily: "DM Mono, monospace", letterSpacing: "0.2em" }}
+          />
+          {error && (
+            <div style={{
+              background: "rgba(224,86,63,0.1)", border: "1px solid rgba(224,86,63,0.3)",
+              borderRadius: 8, padding: "9px 12px", color: "var(--rose)", fontSize: 12.5,
+            }}>{error}</div>
+          )}
+          <button type="submit" className="btn btn-primary" disabled={busy || !code.trim()}>
+            {busy ? "Checking…" : "Unlock"}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export default function Developer() {
+  const { user } = useAuth();
+  const isDev = !!user?.is_developer;
   const [stats, setStats] = useState(null);
   const [orgs, setOrgs] = useState([]);
   const [err, setErr] = useState("");
 
   useEffect(() => {
+    if (!isDev) return;
     api.get("/dev/stats").then(r => r.ok ? setStats(r.data) : setErr(r.data?.detail || "Failed"));
     api.get("/dev/organizations").then(r => { if (r.ok) setOrgs(r.data); });
-  }, []);
+  }, [isDev]);
+
+  if (!isDev) return <UnlockGate />;
 
   return (
     <div className="fade-in">

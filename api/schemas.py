@@ -76,6 +76,9 @@ class CheckoutResponse(BaseModel):
     checkout_url: str
     message: Optional[str] = None
 
+class DeveloperUnlockRequest(BaseModel):
+    code: str = Field(min_length=1, max_length=64)
+
 # --- System / status -----------------------------------------------------------
 class ComponentStatus(BaseModel):
     name: str

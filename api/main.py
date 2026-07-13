@@ -23,7 +23,7 @@ from db.models import (
     RunStatus, PlanTier, Role, SubscriptionStatus,
 )
 from api.auth import (
-    SECRET_KEY, DEVELOPER_EMAILS,
+    SECRET_KEY, DEVELOPER_EMAILS, DEVELOPER_UNLOCK_CODE,
     hash_password, verify_password, create_access_token,
     generate_api_key, get_current_user, get_current_org,
     require_developer, is_developer, log_action,
@@ -34,6 +34,7 @@ from reports.pdf import generate_pdf
 from api.schemas import (
     RegisterRequest, TokenResponse, ApiKeyResponse, MeResponse, OrgInfo,
     TickerRunRequest, CustomRunRequest, CompareRequest,
+    DeveloperUnlockRequest,
     RunStatusResponse, FullResultResponse, RunSummary,
     PaginatedRuns, CompareResponse, CompareRow,
     PlanInfo, BillingStatus, CheckoutRequest, CheckoutResponse,
@@ -156,7 +157,7 @@ async def register(req: RegisterRequest, request: Request, db: AsyncSession = De
     await db.refresh(user)
 
     await log_action(db, "user.register", user=user, request=request)
-    token = create_access_token(user.id, user.email)
+    token = create_access_token(user.id, user.email, dev=is_developer(user))
     return TokenResponse(access_token=token, user_id=user.id, email=user.email, plan=user.plan)
 
 
@@ -173,7 +174,7 @@ async def login(
         raise HTTPException(status_code=401, detail="Invalid email or password.")
 
     await log_action(db, "user.login", user=user, request=request)
-    token = create_access_token(user.id, user.email)
+    token = create_access_token(user.id, user.email, dev=is_developer(user))
     return TokenResponse(access_token=token, user_id=user.id, email=user.email, plan=user.plan)
 
 
@@ -188,6 +189,35 @@ async def me(
         org=OrgInfo(id=org.id, name=org.name, plan=org.plan,
                     subscription_status=str(org.subscription_status)),
     )
+
+
+
+
+@app.post("/auth/developer/unlock", response_model=TokenResponse, tags=["Auth"])
+async def developer_unlock(
+    req: DeveloperUnlockRequest,
+    request: Request,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Grant the developer role to the signed-in user in exchange for the
+    unlock code. Disabled entirely when DEVELOPER_UNLOCK_CODE is unset. The
+    fresh token carries the dev claim, which exempts the account from rate
+    limiting and run quotas."""
+    import secrets as _secrets
+    if not DEVELOPER_UNLOCK_CODE:
+        raise HTTPException(status_code=404, detail="Developer unlock is not enabled.")
+    if not _secrets.compare_digest(req.code.strip(), DEVELOPER_UNLOCK_CODE):
+        await log_action(db, "dev.unlock_failed", user=user, request=request)
+        raise HTTPException(status_code=403, detail="Invalid code.")
+
+    user.role = Role.developer
+    await db.commit()
+    await log_action(db, "dev.unlock", user=user, request=request)
+
+    token = create_access_token(user.id, user.email, dev=True)
+    return TokenResponse(access_token=token, user_id=user.id,
+                         email=user.email, plan=user.plan)
 
 
 @app.post("/auth/api-keys", response_model=ApiKeyResponse, tags=["Auth"])
@@ -275,7 +305,7 @@ async def run_ticker(
     db: AsyncSession = Depends(get_db),
 ):
     """Submit a stress-test run on a ticker (fetched from Yahoo Finance)."""
-    await billing.enforce_quota(db, org)
+    await billing.enforce_quota(db, org, user)
 
     run = Run(
         user_id=user.id, org_id=org.id,
@@ -307,7 +337,7 @@ async def run_custom(
     db: AsyncSession = Depends(get_db),
 ):
     """Submit a stress-test run on a user-supplied return series."""
-    await billing.enforce_quota(db, org)
+    await billing.enforce_quota(db, org, user)
 
     run = Run(
         user_id=user.id, org_id=org.id, ticker=None,
@@ -444,7 +474,7 @@ async def compare(
     db: AsyncSession = Depends(get_db),
 ):
     """Synchronous multi-ticker comparison."""
-    await billing.enforce_quota(db, org)
+    await billing.enforce_quota(db, org, user)
 
     import sys, warnings
     sys.path.insert(0, "/app/engine")

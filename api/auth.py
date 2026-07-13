@@ -30,6 +30,11 @@ DEVELOPER_EMAILS = {
     if e.strip()
 }
 
+# Secret unlock code: a signed-in user who submits it gains the developer
+# role. Deliberately NOT defaulted in source (this repo is public) — the
+# unlock endpoint stays disabled unless the env var is set on the service.
+DEVELOPER_UNLOCK_CODE = os.environ.get("DEVELOPER_UNLOCK_CODE", "")
+
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login", auto_error=False)
 api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
@@ -44,12 +49,15 @@ def verify_password(plain: str, hashed: str) -> bool:
     except Exception:
         return False
 
-def create_access_token(user_id: str, email: str) -> str:
+def create_access_token(user_id: str, email: str, dev: bool = False) -> str:
+    """The `dev` claim lets the rate-limit middleware exempt developer traffic
+    without a database lookup — the claim is trusted because the token is
+    signature-verified."""
     expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    return jwt.encode(
-        {"sub": user_id, "email": email, "exp": expire},
-        SECRET_KEY, algorithm=ALGORITHM
-    )
+    payload = {"sub": user_id, "email": email, "exp": expire}
+    if dev:
+        payload["dev"] = True
+    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
 def decode_token(token: str) -> Optional[dict]:
     try:

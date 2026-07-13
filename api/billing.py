@@ -95,8 +95,15 @@ async def usage_summary(db: AsyncSession, org: Organization) -> dict:
     }
 
 
-async def enforce_quota(db: AsyncSession, org: Organization) -> None:
-    """Raise 402 if the org has exhausted its monthly run quota."""
+async def enforce_quota(db: AsyncSession, org: Organization, user=None) -> None:
+    """Raise 402 if the org has exhausted its monthly run quota.
+
+    Developer accounts are exempt: they exist to test and operate the system,
+    and metering them just produces support noise."""
+    if user is not None:
+        from api.auth import is_developer
+        if is_developer(user):
+            return
     limit = _plan(org)["monthly_runs"]
     if limit is None:
         return
