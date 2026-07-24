@@ -40,3 +40,4 @@ yarn-error.log*
 # Test artifacts
 coverage/
 blue-lotus/
+backtest/wf_results/price_cache/
