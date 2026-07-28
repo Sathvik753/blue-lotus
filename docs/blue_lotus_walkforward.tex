@@ -69,16 +69,22 @@ weakness of a one-shot hold-out: every year is a genuine out-of-sample test, and
 the panel spans multiple market regimes.
 
 On the 496 cells drawn from non-crisis years, the engine's $5\%$ and $1\%$
-lower-tail bounds are breached at $4.0\%$ and $1.0\%$ respectively---neither
-rejectable by a Kupiec proportion-of-failures test ($p=0.31$, $p=0.99$)---and the
-mean probability-integral-transform (PIT) rank is $0.69$, indicating a mild,
-prudent conservatism. Across all 744 cells the mean PIT rank is $0.53$, centred.
-The residual tail miss is concentrated entirely in the four crisis years
-(2015, 2018, 2020, 2022): there the $5\%$ breach rate rises to $34.7\%$, degrading
-monotonically with severity and peaking in the March 2020 shock ($67.7\%$ breach,
-mean PIT $0.06$). The engine therefore reproduces ordinary risk faithfully out of
-sample and localizes---rather than conceals---the residual tail gap that a
-history-calibrated model cannot close.
+lower-tail bounds are breached at $4.0\%$ and $1.0\%$ respectively---rates for
+which a Kupiec proportion-of-failures test fails to reject nominal calibration
+($p=0.31$, $p=0.99$; the test treats cells as independent, an assumption the panel
+only approximately satisfies). We do not claim uniform calibration of the whole
+distribution: a Kolmogorov--Smirnov test rejects PIT uniformity in every stratum,
+and in non-crisis years the departure is conservatism---the median
+probability-integral-transform (PIT) rank is $0.83$, so realized drawdowns are
+typically milder than the engine's central prediction, the prudent direction of
+error. Pooling all 744 cells the mean PIT rank is $0.53$, but this near-central
+value masks two opposing effects---calm-year conservatism and crisis-year
+breaches---that average out. The residual tail miss is concentrated in the four
+crisis years (2015, 2018, 2020, 2022): there the $5\%$ breach rate rises to
+$34.7\%$, degrading monotonically with severity and peaking in the March 2020
+shock ($67.7\%$ breach, median PIT $0.09$). The engine therefore reproduces the
+frequency of ordinary tail losses faithfully out of sample and localizes---rather
+than conceals---the residual gap that a history-calibrated model cannot close.
 \end{abstract}
 
 \noindent\textbf{Keywords:} stress testing, walk-forward validation, out-of-sample
@@ -225,14 +231,19 @@ non-crisis years.
 \section{Results}
 
 \subsection{Headline calibration}
-Table~\ref{tab:headline} reports the panel. Two facts define it. First, on the 496
-non-crisis cells the engine is statistically well calibrated at both tested tail
-levels: the $5\%$ bound is breached in $4.0\%$ of cells and the $1\%$ bound in
-$1.0\%$, neither rejectable by a Kupiec test ($p=0.31$ and $p=0.99$). The mean PIT
-rank of $0.69$ shows the engine runs mildly conservative on ordinary data---the
-prudent direction of error. Second, across the full panel the mean PIT rank is
-$0.53$ and the median $0.53$: realized drawdowns sit, on average, at the centre of
-the predicted distribution. The overall breach rates ($14.3\%$ at $p5$) are a blend
+Table~\ref{tab:headline} reports the panel. The central result is a
+tail-\emph{frequency} statement, and we state it as exactly that. On the 496
+non-crisis cells the $5\%$ bound is breached in $4.0\%$ of cells and the $1\%$
+bound in $1.0\%$; a Kupiec proportion-of-failures test fails to reject nominal
+calibration at either level ($p=0.31$ and $p=0.99$). This is a statement about
+exception \emph{rates}, not about the shape of the whole distribution: as
+Section~\ref{sec:uniform} shows, the engine is mildly conservative through the
+body (non-crisis mean PIT rank $0.69$), so it over-predicts risk in calm markets
+rather than under-predicting it---the prudent direction of error. Across the full
+panel the mean PIT rank is $0.53$; this near-central average should not be read as
+distributional calibration, because it pools the calm-year conservatism above with
+the crisis-year breaches below (uniformity is rejected in every stratum,
+Section~\ref{sec:uniform}). The overall breach rates ($14.3\%$ at $p5$) are a blend
 dominated by the crisis subset, examined next.
 
 \begin{table}[h]
@@ -273,34 +284,54 @@ edge, where realized losses fall in the engine's lower tail.}
 \label{fig:pit}
 \end{figure}
 
+\subsection{Distributional uniformity}
+\label{sec:uniform}
+The breach tests above concern exception \emph{rates}; a stronger requirement is
+that the full PIT sample be uniform, and it is not. A one-sample
+Kolmogorov--Smirnov test rejects uniformity in every stratum: overall $D=0.18$,
+non-crisis $D=0.34$, crisis $D=0.49$, all with $p<10^{-3}$. These rejections have
+opposite sources and must not be collapsed into a single verdict. In non-crisis
+years the departure is \emph{conservatism}---the median PIT rank is $0.83$, so
+realized drawdowns are typically milder than the engine's central prediction; the
+model over-states body risk, which for a risk system is the prudent failure mode.
+In crisis years the departure is the tail breach documented below (median PIT
+$0.09$). The engine is therefore well calibrated in the specific sense the Kupiec
+tail test measures---the \emph{frequency} of $5\%$ and $1\%$ exceedances in
+ordinary markets---but it is not a uniform generator of the entire drawdown
+distribution: it errs conservative through the body. We report this explicitly
+rather than let the favourable breach rates stand alone.
+
 \subsection{Calibration of predicted quantiles}
 Figure~\ref{fig:reliability} plots empirical exceedance frequency against nominal
-lower-tail probability across the whole panel. Through the body of the
-distribution the curve tracks the $45^\circ$ line closely; it lifts above the line
-only in the extreme lower tail, quantifying the crisis-driven excess of breaches
-at the smallest nominal probabilities. This is the graphical signature of a model
-that is correctly specified in the centre and conservative-to-slightly-breached at
-the extremes once crisis years are pooled in.
+lower-tail probability across the whole panel. Through the interior the empirical
+frequency runs at or below the nominal line---the graphical form of the body
+conservatism just described---and it lifts above the line only in the extreme
+lower tail, where the crisis-year breaches accumulate. The curve is thus the
+picture of a model whose exception \emph{rates} are near nominal in the deep tail
+once crises are pooled in, while sitting conservative elsewhere.
 
 \begin{figure}[h]
 \centering
 \includegraphics[width=0.62\textwidth]{wf_reliability.pdf}
 \caption{Calibration curve. Empirical exceedance frequency versus nominal lower-tail
-probability, all 744 cells. Deviation above the diagonal appears only in the
-extreme tail.}
+probability, all 744 cells. The curve runs at or below the diagonal through the
+interior (body conservatism) and above it only in the extreme tail.}
 \label{fig:reliability}
 \end{figure}
 
 \subsection{Regime decomposition by year}
 Table~\ref{tab:byyear} resolves the panel by test year. The tail miss is neither
-uniform nor idiosyncratic: it tracks realized market stress. The eight non-crisis
-years all breach at or below nominal, several well below. Among crisis years, 2015
-is fully contained ($3.2\%$ breach, $91.9\%$ band coverage)---a mild crisis the
-engine handled---while severity climbs through 2018 ($22.6\%$) and 2022 ($45.2\%$)
-to 2020 ($67.7\%$, mean PIT $0.06$), the fastest broad equity drawdown in the
-sample. The monotone relationship between realized severity and breach rate is the
-central qualitative finding: the engine does not miss at random; it misses exactly
-where, and in proportion to how much, history failed to anticipate the future.
+uniform nor idiosyncratic: it tracks realized market stress. Six of the eight
+non-crisis years breach at or below the nominal $5\%$ rate, several well below;
+the two exceptions---2013 ($8.1\%$) and 2023 ($11.3\%$, the year of the
+regional-bank episode)---exceed it modestly but remain far short of any crisis
+year. Among the crisis years, 2015 is fully contained ($3.2\%$ breach, $91.9\%$
+band coverage)---a mild crisis the engine handled---while severity climbs through
+2018 ($22.6\%$) and 2022 ($45.2\%$) to 2020 ($67.7\%$, mean PIT $0.06$), the
+fastest broad equity drawdown in the sample. The monotone relationship between
+realized severity and breach rate is the central qualitative finding: the engine
+does not miss at random; it misses in proportion to how much history failed to
+anticipate the future.
 
 \begin{table}[h]
 \centering
@@ -345,9 +376,10 @@ the exposures that carry the most violent crisis drawdowns---US equity beta
 ($16.7\%$ breach) and, notably, rates ($18.3\%$), the latter driven by the
 historic 2022 Treasury drawdown that no pre-2022 window anticipated. Credit
 ($8.3\%$) and the sector funds ($10.2\%$) sit closer to nominal. Mean PIT ranks
-remain near or above $0.5$ for every class, confirming that the central prediction
-is well located across the cross-section; the dispersion is a tail phenomenon, not
-a systematic bias in any one sleeve.
+cluster around $0.5$ across classes (from $0.43$ for rates to $0.64$ for US
+equity), so the central prediction is reasonably located across the
+cross-section and the dispersion in breach rates is a tail phenomenon rather than
+a directional bias in any one sleeve.
 
 \begin{table}[h]
 \centering
@@ -389,41 +421,63 @@ cluster is the 2020 and 2022 crisis cells.}
 The walk-forward panel delivers a sharper version of the message from the earlier
 event study, and it does so on the corrected engine. On ordinary market
 conditions---the regime in which a risk system spends the overwhelming majority of
-its life---the engine is not merely plausible but statistically indistinguishable
-from a correctly calibrated model at both the $5\%$ and $1\%$ tail levels, with
-errors biased toward caution, established out of sample across 496 asset-years.
-This is the precondition for taking any crisis result seriously: a model that
+its life---a Kupiec test fails to reject nominal $5\%$ and $1\%$ tail-breach rates
+out of sample across 496 asset-years, with the body of the distribution biased
+toward caution. We are careful about the strength of that claim: it concerns
+exception frequencies, not the full distribution (which is not uniform,
+Section~\ref{sec:uniform}), and the test assumes independent cells, which the
+panel only approximately satisfies (Section~\ref{sec:limits}). Within those
+bounds it is the precondition for taking any crisis result seriously: a model that
 over-fired in calm markets would provide no standing to interpret its behaviour in
 storms.
 
 The residual miss is real, and the study measures rather than hides it. It is
 concentrated in the crisis years, monotone in realized severity, and concentrated
-in the exposures that carry systemic tail risk. This is a property of the
-estimation problem, not a defect peculiar to this engine: any model whose tail is
-calibrated to realized returns is bounded by its own worst observed history, and
-before March 2020 there was no March 2020 in the data. The design response is
-already in the engine---the crisis-regime structure, the drawdown-conditional
-blend, and the operator-configurable loss floor exist to extend the simulated
-distribution into the region this panel shows lies beyond historical reach. The
-honest deployment is to use the engine as calibrated here for ordinary risk
-measurement, and to engage the crisis overlay when sizing for systemic scenarios.
+in the exposures that carry systemic tail risk. The natural explanation is not
+that the model had seen no crisis: price history begins in 2004, so every
+training window for the 2020 test cells spans twelve to sixteen years and
+\emph{includes the 2008 global financial crisis} without exception. The engine
+under-covered 2020 despite having been fit on 2008. The operative fact is that a
+tail calibrated to one systemic episode need not envelope the next: the March 2020
+drawdown's velocity and cross-asset breadth differed from the 2008 shape the model
+had learned, in exactly the dimensions that drive a one-year maximum drawdown. A
+history-calibrated tail is bounded by the worst \emph{shape} it has observed, and
+2020 exceeded 2008 on that axis. The design response is already in the
+engine---the crisis-regime structure, the drawdown-conditional blend, and the
+operator-configurable loss floor exist to extend the simulated distribution into
+the region this panel shows lies beyond historical reach. The honest deployment is
+to use the engine as calibrated here for ordinary risk measurement, and to engage
+the crisis overlay when sizing for systemic scenarios.
 
-It is worth recording what the v3.1 corrections bought. The mean PIT rank across
-the full panel is $0.53$, essentially centred; the prior release's optimistic
-biases---winsorized tails, deletion of extreme paths, additive drawdowns---would
-each have pushed realized outcomes further into the predicted tail, lowering PIT
-and inflating breach rates. Measuring the corrected engine is what allows the
-calm-year coverage to land at nominal rather than beyond it.
+It is worth recording what the v3.1 corrections bought, without overstating it.
+The prior release's optimistic biases---winsorized tails, deletion of extreme
+paths, additive drawdowns---would each have pushed realized outcomes further into
+the predicted tail, lowering PIT ranks and inflating breach rates; measuring the
+corrected engine is what allows the calm-year breach frequencies to land at
+nominal rather than beyond it. It does not make the distribution uniform: the
+corrected engine is conservative through the body, which the corrections did not,
+and were not intended to, remove.
 
 % =============================================================== 6 Limitations
 \section{Limitations}
+\label{sec:limits}
 \begin{enumerate}[leftmargin=1.6em, itemsep=2pt]
   \item \textbf{Cross-sectional dependence.} The 62 instruments in a given year
   share a common macro environment, so the effective number of independent
-  observations within a year is smaller than the cell count; the panel's power
-  derives chiefly from its \emph{temporal} span across regimes, not from breadth
-  alone. This is precisely why the walk-forward design, rather than a wider
-  single-year cross-section, is the right instrument.
+  observations within a year is smaller than the cell count. The Kupiec and
+  Kolmogorov--Smirnov statistics reported here assume independent cells; under the
+  dependence present in the panel their $p$-values overstate precision, and the
+  ``fail to reject'' verdict on non-crisis calibration should be read as
+  suggestive rather than a formal size-controlled test. A year-clustered or
+  block-bootstrap treatment is the correct next step and is left to future work.
+  This dependence is also why the panel's power derives chiefly from its
+  \emph{temporal} span across regimes, not from cross-sectional breadth.
+  \item \textbf{History depth.} Price data begin in 2004. Every training window
+  therefore contains the 2008 crisis, but none contains a pre-2004 regime; the
+  earliest test years (from 2013) are fit on roughly nine years of data, and the
+  tail estimates rest on at most $\sim$16 years of exceedances. No 1987, 2000, or
+  earlier stress informs the fits, and the deep-tail parameters are correspondingly
+  data-limited.
   \item \textbf{Annual horizon.} Each cell evaluates a one-year maximum drawdown.
   Shorter or path-dependent horizons would probe different aspects of the predicted
   distribution and are left to future work.
@@ -440,13 +494,16 @@ calm-year coverage to land at nominal rather than beyond it.
 \section{Conclusion}
 Under a strict expanding-window protocol spanning 62 instruments, seven asset
 classes, and twelve years---744 out-of-sample cells in total---engine release v3.1
-is statistically well calibrated on non-crisis markets, unrejectable at either the
-$5\%$ or $1\%$ tail level, and centred across the full panel. Its behaviour under
-the four crisis years of the period is fully characterised: coverage degrades
-monotonically with realized severity and breaks down only at the largest systemic
-shocks, exactly where a history-calibrated model must. The standard adopted
-throughout is the one that matters: quantify the residual gap out of sample, and
-report it.
+reproduces the \emph{frequency} of ordinary tail losses on non-crisis markets: a
+Kupiec test fails to reject nominal $5\%$ and $1\%$ breach rates (subject to the
+cross-sectional-dependence caveat of Section~\ref{sec:limits}), while the engine
+errs conservative through the body of the distribution, which a uniformity test
+confirms is not itself uniform. Its behaviour under the four crisis years of the
+period is fully characterised: coverage degrades monotonically with realized
+severity and breaks down only at the largest systemic shocks, exactly where a
+tail calibrated to prior crises must. The standard adopted throughout is the one
+that matters: quantify the residual gap out of sample, state precisely what was
+and was not demonstrated, and report both.
 
 \vspace{0.5em}
 \noindent\textbf{Reproducibility.} The panel regenerates from

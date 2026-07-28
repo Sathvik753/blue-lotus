@@ -76,7 +76,11 @@ def main():
 
     json.dump(summary, open(os.path.join(OUT, "summary.json"), "w"), indent=2)
     print(json.dumps(summary["overall"], indent=2))
-    print("calm:", summary["calm_years"].get("p5_rate"), "crisis:", summary["crisis_years"].get("p5_rate"))
+    print("calm p5:", summary["calm_years"].get("p5_rate"), "crisis p5:", summary["crisis_years"].get("p5_rate"))
+    # KS uniformity test, reported explicitly per stratum (see paper Section 4.3).
+    for k in ("overall", "calm_years", "crisis_years"):
+        d = summary[k]
+        print(f"KS[{k}] D={d['ks_stat']} p={d['ks_p']} meanPIT={d['mean_pit']} medianPIT={d['median_pit']}")
 
     pit = np.array([c["pit_rank"] for c in cells])
 
