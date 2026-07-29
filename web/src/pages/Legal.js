@@ -11,7 +11,7 @@ import Logo from "../components/Logo";
    ───────────────────────────────────────────────────────────────────────── */
 const COMPANY = "Blue Lotus Labs";
 const ENTITY = "Blue Lotus Labs";      // ← update to "<Your LLC>, LLC"
-const STATE = "[your state]";          // ← fill governing-law state
+const STATE = "Michigan";              // governing-law state
 const EMAIL = "support@bluelotuslabs.net";
 const EFFECTIVE = "July 2026";
 
