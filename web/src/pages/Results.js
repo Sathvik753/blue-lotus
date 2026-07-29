@@ -248,6 +248,21 @@ export default function Results() {
   );
 
   const r = data.result;
+  if (!r) return (
+    <div className="fade-in">
+      <button onClick={() => navigate(-1)} className="btn btn-secondary"
+        style={{ marginBottom: 24, display: "flex", alignItems: "center", gap: 8 }}>
+        <ArrowLeft size={14} /> Back
+      </button>
+      <div style={{ color: "var(--muted)", background: "var(--card)", border: "1px solid var(--border-soft)",
+        borderRadius: 10, padding: 20, lineHeight: 1.6 }}>
+        No detailed report is stored for this run. This happens for multi-ticker
+        <strong style={{ color: "var(--light)" }}> comparison</strong> runs (which produce a side-by-side table
+        rather than a full report) and for older runs saved before reports were retained. Start a fresh
+        single-strategy run from <strong style={{ color: "var(--light)" }}>New Run</strong> to see a full report.
+      </div>
+    </div>
+  );
   const dd = r.drawdown;
   const es = r.expected_shortfall;
   const rec = r.recovery;
