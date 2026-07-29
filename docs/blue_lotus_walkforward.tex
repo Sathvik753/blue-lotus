@@ -82,9 +82,15 @@ value masks two opposing effects---calm-year conservatism and crisis-year
 breaches---that average out. The residual tail miss is concentrated in the four
 crisis years (2015, 2018, 2020, 2022): there the $5\%$ breach rate rises to
 $34.7\%$, degrading monotonically with severity and peaking in the March 2020
-shock ($67.7\%$ breach, median PIT $0.09$). The engine therefore reproduces the
-frequency of ordinary tail losses faithfully out of sample and localizes---rather
-than conceals---the residual gap that a history-calibrated model cannot close.
+shock ($67.7\%$ breach, median PIT $0.09$). Against four baselines (Gaussian,
+Student-$t$, and i.i.d.\ and block bootstraps) scored by the Continuous Ranked
+Probability Score, the engine is the only model with non-rejectable calm-market
+tail calibration and improves on every baseline's forecast skill by $20$--$39\%$
+in non-crisis years, conceding sharpness only in crises---a deliberate trade the
+baselines make in reverse by being over-dispersed in all regimes. The engine
+therefore reproduces the frequency of ordinary tail losses faithfully out of
+sample and localizes---rather than conceals---the residual gap that a
+history-calibrated model cannot close.
 \end{abstract}
 
 \noindent\textbf{Keywords:} stress testing, walk-forward validation, out-of-sample
@@ -226,6 +232,29 @@ years, the grid yields $744$ evaluation cells. Four years are designated
 \emph{crisis} years for stratification---2015 (China/oil), 2018 (Volmageddon and
 the Q4 selloff), 2020 (COVID), and 2022 (the rate shock)---leaving eight
 non-crisis years.
+
+\subsection{Benchmark models and scoring}
+\label{sec:benchmethod}
+Calibration alone does not establish that the engine's structure earns its
+complexity; a naive model could calibrate as well. We therefore evaluate four
+baselines on the \emph{identical} cells, each fit on the same training window and
+each producing an $N=3{,}000$ ensemble of one-year maximum drawdowns: (i) an
+i.i.d.\ Gaussian fit---the textbook Monte Carlo the engine is designed to
+improve on; (ii) an i.i.d.\ Student-$t$ fit, a fat-tailed parametric competitor;
+(iii) a historical i.i.d.\ bootstrap of training returns; and (iv) a circular
+block bootstrap of block length $20$, which preserves the volatility clustering
+the regime model targets and is the strongest baseline. Beyond the breach and PIT
+statistics, each cell is scored with the Continuous Ranked Probability Score,
+\[
+  \mathrm{CRPS}(F, y) = \E\,|X - y| - \tfrac12\,\E\,|X - X'|,
+\]
+a strictly proper scoring rule for a probabilistic forecast of a scalar (with
+$X,X'$ independent draws from the forecast ensemble $F$ and $y$ the realized
+drawdown; lower is better). We report mean CRPS, the engine's CRPS skill score
+$1 - \overline{\mathrm{CRPS}}_{\mathrm{engine}} /
+\overline{\mathrm{CRPS}}_{\mathrm{base}}$ (positive favours the engine), the share
+of cells on which the engine's CRPS is lower, and a paired Wilcoxon signed-rank
+test on the per-cell CRPS differences.
 
 % =============================================================== 4 Results
 \section{Results}
@@ -415,6 +444,87 @@ cluster is the 2020 and 2022 crisis cells.}
 \label{fig:scatter}
 \end{figure}
 
+% =============================================================== 4b Benchmark
+\section{Comparison Against Baselines}
+\label{sec:benchmark}
+Table~\ref{tab:benchmark} places the engine against the four baselines of
+Section~\ref{sec:benchmethod}. The result is regime-dependent, and stating it
+precisely is the point of the exercise.
+
+In non-crisis markets---where a risk system operates the great majority of the
+time---the engine dominates on both axes at once. It is the \emph{only} model
+whose tail calibration is not rejected ($4.0\%$ $p5$ breach, Kupiec $p=0.31$);
+every baseline breaches at $0.6$--$0.8\%$, six to eight times below nominal, which
+means they systematically over-state tail risk and would raise near-constant false
+alarms. That same over-dispersion costs them sharpness: the engine's mean CRPS is
+$20$--$39\%$ lower than every baseline (paired Wilcoxon $p<10^{-3}$ throughout),
+and it wins on $71$--$82\%$ of calm cells. Pooled over the full panel the engine
+still posts the lowest CRPS, beating the Gaussian, Student-$t$, and i.i.d.\
+bootstrap by $7$--$14\%$ and edging the block bootstrap by $0.6\%$ (a statistical
+tie, Wilcoxon $p=0.04$).
+
+In crisis years the ranking inverts: the engine's CRPS is $27$--$38\%$
+\emph{worse} than the baselines, and it wins only about a quarter of crisis cells.
+This is both honest and informative. The baselines score better in crises not
+because they are calibrated---none is; all four fail the Kupiec test at
+$p<10^{-3}$, with $p5$ breach rates of $21$--$22\%$---but because they are
+uniformly over-dispersed \emph{everywhere}, so a permanently-too-wide distribution
+happens to sit closer to a realized extreme. The very sharpness that wins the
+engine the calm regime is what costs it in the tail. A model that is vague in all
+weather looks better in a storm and worse the other four-fifths of the year; the
+engine makes the opposite trade deliberately, and the operator-configurable crisis
+overlay described in the companion engine paper is the lever for widening the
+distribution when sizing for systemic scenarios.
+
+\begin{table}[h]
+\centering
+\caption{Benchmark comparison. Mean CRPS (lower is better) by regime; non-crisis
+tail calibration; and the engine's CRPS skill score against each baseline on
+non-crisis cells (positive favours the engine). CRPS $\times 10^{2}$.}
+\label{tab:benchmark}
+\begin{tabular}{lccccc}
+\toprule
+Model & CRPS calm & CRPS crisis & CRPS all & Calm $p5$ breach & Engine skill (calm) \\
+\midrule
+\textbf{Blue Lotus}   & \textbf{4.20} & 9.32 & \textbf{5.91} & \textbf{$4.0\%$} ($p=0.31$) & --- \\
+Gaussian              & 6.89 & 6.77 & 6.85 & $0.8\%$ ($p<10^{-3}$) & $+39\%$ \\
+Student-$t$           & 5.94 & 7.20 & 6.36 & $0.8\%$ ($p<10^{-3}$) & $+29\%$ \\
+Hist.\ bootstrap      & 6.35 & 6.88 & 6.53 & $0.8\%$ ($p<10^{-3}$) & $+34\%$ \\
+Block bootstrap       & 5.24 & 7.34 & 5.94 & $0.6\%$ ($p<10^{-3}$) & $+20\%$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Figure~\ref{fig:benchcrps} shows the CRPS decomposition and
+Figure~\ref{fig:benchcalib} the calm-market calibration gap. The conclusion a
+technical reader should draw is specific. The regime, Extreme-Value, and shrinkage
+machinery is not decoration: it is the only configuration in this comparison that
+delivers \emph{both} calibrated and sharp calm-market drawdown forecasts, which
+naive parametric or historical simulation does not, and it does so at a cost in
+crisis sharpness that is explicit and addressable rather than concealed. A buyer
+evaluating the engine on the regime it will spend most of its life in is
+evaluating its strongest case; a buyer evaluating it on crises alone would do
+better with a deliberately vague model, and should instead engage the crisis
+overlay.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.82\textwidth]{wf_benchmark_crps.pdf}
+\caption{Mean CRPS by model and regime (lower is better). Blue Lotus is best in
+non-crisis years and pooled, and worst in crises---the deliberate
+sharpness-versus-robustness trade discussed in the text.}
+\label{fig:benchcrps}
+\end{figure}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.72\textwidth]{wf_benchmark_calib.pdf}
+\caption{Non-crisis $p5$ breach rate by model. Only Blue Lotus sits near the
+nominal $5\%$ line; every baseline is far below it, over-stating tail risk in calm
+markets.}
+\label{fig:benchcalib}
+\end{figure}
+
 % =============================================================== 5 Discussion
 \section{Discussion}
 
@@ -501,9 +611,13 @@ errs conservative through the body of the distribution, which a uniformity test
 confirms is not itself uniform. Its behaviour under the four crisis years of the
 period is fully characterised: coverage degrades monotonically with realized
 severity and breaks down only at the largest systemic shocks, exactly where a
-tail calibrated to prior crises must. The standard adopted throughout is the one
-that matters: quantify the residual gap out of sample, state precisely what was
-and was not demonstrated, and report both.
+tail calibrated to prior crises must. Against four naive baselines scored by a
+strictly proper rule, it is the sole model delivering \emph{calibrated and sharp}
+calm-market forecasts---improving CRPS by $20$--$39\%$ in the regime where a risk
+desk operates---while conceding crisis sharpness by construction, a trade the
+crisis overlay exists to reverse on demand. The standard adopted throughout is the
+one that matters: quantify the residual gap out of sample, state precisely what
+was and was not demonstrated, and report both.
 
 \vspace{0.5em}
 \noindent\textbf{Reproducibility.} The panel regenerates from
