@@ -124,9 +124,19 @@ export default function Layout() {
 
       <main style={{
         marginLeft: SIDEBAR_W, flex: 1, padding: "44px 48px", minHeight: "100vh",
-        maxWidth: 1280,
+        maxWidth: 1280, display: "flex", flexDirection: "column",
       }}>
-        <Outlet />
+        <div style={{ flex: 1 }}><Outlet /></div>
+        <div style={{ marginTop: 40, paddingTop: 16, borderTop: "1px solid var(--border-soft)",
+          fontSize: 11, color: "var(--muted)", lineHeight: 1.6 }}>
+          Outputs are probabilistic model estimates conditional on their assumptions — informational only, not
+          investment advice, and not a guarantee of any result.{" "}
+          <a href="/disclaimer" style={{ color: "var(--muted)", textDecoration: "underline" }}>Disclaimer</a>
+          {" · "}
+          <a href="/terms" style={{ color: "var(--muted)", textDecoration: "underline" }}>Terms</a>
+          {" · "}
+          <a href="/privacy" style={{ color: "var(--muted)", textDecoration: "underline" }}>Privacy</a>
+        </div>
       </main>
     </div>
   );

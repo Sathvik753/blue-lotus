@@ -8,6 +8,7 @@ import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Status from "./pages/Status";
+import { Terms, Privacy, Disclaimer } from "./pages/Legal";
 import NewRun from "./pages/NewRun";
 import Results from "./pages/Results";
 import History from "./pages/History";
@@ -25,6 +26,9 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/status" element={<Status />} />
+          <Route path="/terms" element={<Terms />} />
+          <Route path="/privacy" element={<Privacy />} />
+          <Route path="/disclaimer" element={<Disclaimer />} />
 
           {/* Authenticated app */}
           <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>

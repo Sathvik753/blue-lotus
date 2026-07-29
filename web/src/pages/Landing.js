@@ -5,7 +5,7 @@ import Logo from "../components/Logo";
 import { api } from "../utils/api";
 import { useAuth } from "../context/Auth";
 
-const SUPPORT_EMAIL = "founders@bluelotuslabs.io";
+const SUPPORT_EMAIL = "support@bluelotuslabs.net";
 
 const HIGHLIGHTS = [
   { icon: Activity, title: "Regime-aware Monte Carlo", body: "Volatility regimes, EVT tails, and bootstrap intervals on every metric — not a single-distribution toy." },
@@ -139,8 +139,11 @@ export default function Landing() {
         display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 12,
         color: "var(--muted)", fontSize: 12,
       }}>
-        <span>© {new Date().getFullYear()} Blue Lotus Labs</span>
-        <span style={{ display: "flex", gap: 18 }}>
+        <span>© {new Date().getFullYear()} Blue Lotus Labs · Risk analytics, not investment advice.</span>
+        <span style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+          <Link to="/terms" style={{ color: "var(--muted)" }}>Terms</Link>
+          <Link to="/privacy" style={{ color: "var(--muted)" }}>Privacy</Link>
+          <Link to="/disclaimer" style={{ color: "var(--muted)" }}>Disclaimer</Link>
           <Link to="/status" style={{ color: "var(--muted)" }}>Status</Link>
           <a href={`mailto:${SUPPORT_EMAIL}`} style={{ color: "var(--muted)" }}>{SUPPORT_EMAIL}</a>
         </span>

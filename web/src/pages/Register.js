@@ -57,6 +57,12 @@ export default function Register() {
         <button type="submit" className="btn btn-primary" disabled={busy} style={{ padding: "12px", marginTop: 4 }}>
           {busy ? <><span className="spinner" style={{ marginRight: 8 }} />Creating…</> : "Create workspace"}
         </button>
+        <p style={{ color: "var(--muted)", fontSize: 11.5, lineHeight: 1.5, textAlign: "center", margin: "2px 4px 0" }}>
+          By creating an account you agree to our{" "}
+          <Link to="/terms" style={{ color: "var(--gold)" }}>Terms</Link> and{" "}
+          <Link to="/privacy" style={{ color: "var(--gold)" }}>Privacy Policy</Link>, and understand that
+          Blue Lotus is a risk-analytics tool, <Link to="/disclaimer" style={{ color: "var(--gold)" }}>not investment advice</Link>.
+        </p>
       </form>
       <p style={{ color: "var(--muted)", fontSize: 13, marginTop: 20, textAlign: "center" }}>
         Already have an account? <Link to="/login" style={{ color: "var(--gold)" }}>Sign in</Link>
