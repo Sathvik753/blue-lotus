@@ -14,7 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
+from sqlalchemy import select, func, or_
 from sqlalchemy.orm import selectinload
 
 from db.database import get_db, init_db, AsyncSessionLocal
@@ -440,11 +440,18 @@ async def list_runs(
     db: AsyncSession = Depends(get_db),
 ):
     offset = (page - 1) * page_size
-    total_q = await db.execute(select(func.count(Run.id)).where(Run.org_id == org.id))
+    # Multi-ticker comparison runs are one-shot side-by-sides with no stored
+    # report, so they don't belong in History. They are created with a
+    # strategy name of "<ticker> comparison"; exclude them here.
+    not_comparison = or_(Run.strategy_name.is_(None), Run.strategy_name.notlike("% comparison"))
+
+    total_q = await db.execute(
+        select(func.count(Run.id)).where(Run.org_id == org.id, not_comparison)
+    )
     total = total_q.scalar()
 
     runs_q = await db.execute(
-        select(Run).where(Run.org_id == org.id)
+        select(Run).where(Run.org_id == org.id, not_comparison)
         .options(selectinload(Run.result))
         .order_by(Run.created_at.desc())
         .offset(offset).limit(page_size)
