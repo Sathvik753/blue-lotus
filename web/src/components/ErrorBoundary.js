@@ -26,8 +26,7 @@ export default class ErrorBoundary extends React.Component {
         <div className="card" style={{ maxWidth: 440, textAlign: "center" }}>
           <h1 style={{ fontSize: 20, marginBottom: 8 }}>Something went wrong</h1>
           <p style={{ color: "var(--muted)", fontSize: 14, marginBottom: 20 }}>
-            This page hit an unexpected error. Reloading usually fixes it. If it keeps happening,
-            let us know at <a href="mailto:support@bluelotuslabs.net" style={{ color: "var(--gold)" }}>support@bluelotuslabs.net</a>.
+            This page hit an unexpected error. Reloading usually fixes it.
           </p>
           <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
             <button className="btn btn-primary" onClick={() => window.location.reload()}>Reload</button>

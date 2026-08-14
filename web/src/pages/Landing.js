@@ -5,7 +5,6 @@ import Logo from "../components/Logo";
 import { api } from "../utils/api";
 import { useAuth } from "../context/Auth";
 
-const SUPPORT_EMAIL = "support@bluelotuslabs.net";
 
 const HIGHLIGHTS = [
   { icon: Activity, title: "Regime-aware Monte Carlo", body: "Volatility regimes, EVT tails, and bootstrap intervals on every metric — not a single-distribution toy." },
@@ -65,9 +64,6 @@ export default function Landing() {
           <Link to="/register" className="btn btn-primary" style={{ padding: "13px 30px", display: "flex", alignItems: "center", gap: 8 }}>
             Start free <ArrowRight size={16} />
           </Link>
-          <a href={`mailto:${SUPPORT_EMAIL}?subject=Blue%20Lotus%20demo`} className="btn btn-secondary" style={{ padding: "13px 30px" }}>
-            Book a demo
-          </a>
         </div>
       </section>
 
@@ -119,16 +115,10 @@ export default function Landing() {
                   </div>
                 ))}
               </div>
-              {p.tier === "enterprise" ? (
-                <a href={`mailto:${SUPPORT_EMAIL}?subject=Enterprise`} className="btn btn-secondary" style={{ width: "100%", textAlign: "center" }}>
-                  Contact sales
-                </a>
-              ) : (
-                <Link to="/register" className={`btn ${p.tier === "pro" ? "btn-primary" : "btn-secondary"}`}
-                  style={{ width: "100%", textAlign: "center", display: "block" }}>
-                  {p.tier === "free" ? "Start free" : "Choose Pro"}
-                </Link>
-              )}
+              <Link to="/register" className={`btn ${p.tier === "pro" ? "btn-primary" : "btn-secondary"}`}
+                style={{ width: "100%", textAlign: "center", display: "block" }}>
+                {p.tier === "free" ? "Start free" : p.tier === "enterprise" ? "Get started" : "Choose Pro"}
+              </Link>
             </div>
           ))}
         </div>
@@ -145,7 +135,6 @@ export default function Landing() {
           <Link to="/privacy" style={{ color: "var(--muted)" }}>Privacy</Link>
           <Link to="/disclaimer" style={{ color: "var(--muted)" }}>Disclaimer</Link>
           <Link to="/status" style={{ color: "var(--muted)" }}>Status</Link>
-          <a href={`mailto:${SUPPORT_EMAIL}`} style={{ color: "var(--muted)" }}>{SUPPORT_EMAIL}</a>
         </span>
       </footer>
     </div>

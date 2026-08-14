@@ -12,7 +12,6 @@ import Logo from "../components/Logo";
 const COMPANY = "Blue Lotus Labs";
 const ENTITY = "Blue Lotus Labs";      // ← update to "<Your LLC>, LLC"
 const STATE = "Michigan";              // governing-law state
-const EMAIL = "support@bluelotuslabs.net";
 const EFFECTIVE = "July 2026";
 
 function LegalShell({ title, children }) {
@@ -38,7 +37,6 @@ function LegalShell({ title, children }) {
         <Link to="/terms" style={{ color: "var(--muted)" }}>Terms</Link>
         <Link to="/privacy" style={{ color: "var(--muted)" }}>Privacy</Link>
         <Link to="/disclaimer" style={{ color: "var(--muted)" }}>Disclaimer</Link>
-        <a href={`mailto:${EMAIL}`} style={{ color: "var(--muted)" }}>{EMAIL}</a>
       </footer>
     </div>
   );
@@ -183,7 +181,7 @@ export function Terms() {
         appropriate, notice to you. Continued use after changes take effect constitutes acceptance.</P>
 
       <H>14. Contact</H>
-      <P>Questions about these Terms: <a href={`mailto:${EMAIL}`} style={{ color: "var(--gold)" }}>{EMAIL}</a>.</P>
+      <P>Questions about these Terms may be directed to {COMPANY} through the {COMPANY} website.</P>
     </LegalShell>
   );
 }
@@ -253,7 +251,7 @@ export function Privacy() {
       <P>We may update this Policy; changes will be posted here with a new effective date.</P>
 
       <H>11. Contact</H>
-      <P>Privacy questions or requests: <a href={`mailto:${EMAIL}`} style={{ color: "var(--gold)" }}>{EMAIL}</a>.</P>
+      <P>Privacy questions or requests may be directed to {COMPANY} through the {COMPANY} website.</P>
     </LegalShell>
   );
 }
