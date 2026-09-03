@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Check, ArrowRight, ShieldCheck, Activity, GitBranch } from "lucide-react";
+import { Check, ArrowRight, ShieldCheck, Activity, GitBranch, FileText } from "lucide-react";
 import Logo from "../components/Logo";
 import { api } from "../utils/api";
 import { useAuth } from "../context/Auth";
@@ -76,6 +76,37 @@ export default function Landing() {
             <p style={{ color: "var(--muted)", fontSize: 13.5, lineHeight: 1.6 }}>{body}</p>
           </div>
         ))}
+      </section>
+
+      {/* Research */}
+      <section style={{ marginBottom: 70 }}>
+        <div className="card" style={{
+          display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between",
+          gap: 24, padding: "26px 28px",
+        }}>
+          <div style={{ maxWidth: 560 }}>
+            <div style={{
+              fontFamily: "DM Mono, monospace", fontSize: 11, letterSpacing: "0.16em",
+              textTransform: "uppercase", color: "var(--teal-2)", marginBottom: 8,
+            }}>Research</div>
+            <h2 style={{ fontSize: 24, marginBottom: 8 }}>The engine, in full detail</h2>
+            <p style={{ color: "var(--muted)", fontSize: 14, lineHeight: 1.6 }}>
+              Read the methodology and the out-of-sample evidence behind Blue Lotus —
+              regime modeling, Extreme Value tails, and a walk-forward validation across
+              744 asset-years that benchmarks the engine against naive baselines.
+            </p>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, minWidth: 220 }}>
+            <a href="/engine-paper.pdf" target="_blank" rel="noopener noreferrer"
+              className="btn btn-primary" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+              <FileText size={15} /> Engine paper
+            </a>
+            <a href="/validation-paper.pdf" target="_blank" rel="noopener noreferrer"
+              className="btn btn-secondary" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+              <FileText size={15} /> Validation study
+            </a>
+          </div>
+        </div>
       </section>
 
       {/* Pricing */}

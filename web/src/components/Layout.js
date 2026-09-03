@@ -1,5 +1,5 @@
 import React from "react";
-import { Outlet, NavLink, useNavigate } from "react-router-dom";
+import { Outlet, NavLink, Link, useNavigate } from "react-router-dom";
 import { Clock, BarChart2, Zap, CreditCard, Terminal, LogOut } from "lucide-react";
 import Logo from "./Logo";
 import { useAuth } from "../context/Auth";
@@ -68,8 +68,10 @@ export default function Layout() {
         backdropFilter: "blur(18px)", WebkitBackdropFilter: "blur(18px)",
         borderRight: "1px solid var(--border-soft)",
       }}>
-        {/* Brand */}
-        <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "0 22px 30px" }}>
+        {/* Brand — links back to the public home page */}
+        <Link to="/" title="Back to home" style={{
+          display: "flex", alignItems: "center", gap: 12, padding: "0 22px 30px", textDecoration: "none",
+        }}>
           <Logo size={42} />
           <div>
             <div style={{
@@ -85,7 +87,7 @@ export default function Layout() {
               Labs · Risk
             </div>
           </div>
-        </div>
+        </Link>
 
         {/* Nav */}
         <nav style={{ flex: 1, padding: "0 14px" }}>
