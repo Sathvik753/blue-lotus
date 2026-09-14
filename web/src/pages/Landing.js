@@ -71,7 +71,7 @@ export default function Landing() {
         <div className="bl-nav-inner">
           <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
             <Logo size={34} />
-            <span className="gradient-text" style={{ fontFamily: "Syne, sans-serif", fontWeight: 800, fontSize: 17 }}>
+            <span className="gradient-text" style={{ fontWeight: 600, fontSize: 19, letterSpacing: "-0.02em" }}>
               Blue Lotus
             </span>
           </div>
@@ -104,7 +104,7 @@ export default function Landing() {
           <Link to="/register" className="btn btn-primary bl-btn-lg">
             Start free <ArrowRight size={17} />
           </Link>
-          <a href="#pricing" className="btn btn-secondary bl-btn-lg">See pricing</a>
+          <a href="#pricing" className="link-chevron" style={{ fontSize: 17 }}>See pricing</a>
         </div>
         <div className="bl-fine">Free to start · <b>Plus $25/mo</b> · <b>Pro $100/mo</b> · no card required</div>
 

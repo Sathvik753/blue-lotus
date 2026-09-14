@@ -61,7 +61,7 @@ export function AuthShell({ title, subtitle, children }) {
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 28 }}>
           <Logo size={54} />
           <div className="gradient-text" style={{
-            fontFamily: "Syne, sans-serif", fontWeight: 800, fontSize: 22, marginTop: 12,
+            fontFamily: "var(--font)", fontWeight: 600, fontSize: 22, marginTop: 12,
           }}>Blue Lotus</div>
         </div>
         <div className="card">

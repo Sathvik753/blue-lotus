@@ -7,7 +7,7 @@ function Stat({ label, value }) {
   return (
     <div className="card metric" style={{ padding: "18px 20px" }}>
       <div style={{ fontSize: 12, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>{label}</div>
-      <div style={{ fontSize: 28, fontWeight: 800, marginTop: 6 }}>{value}</div>
+      <div style={{ fontSize: 28, fontWeight: 600, marginTop: 6 }}>{value}</div>
     </div>
   );
 }
@@ -46,7 +46,7 @@ function UnlockGate() {
           <input
             type="password" value={code} onChange={e => setCode(e.target.value)}
             placeholder="Access code" autoFocus
-            style={{ textAlign: "center", fontFamily: "DM Mono, monospace", letterSpacing: "0.2em" }}
+            style={{ textAlign: "center", fontFamily: "ui-monospace, SF Mono, Menlo, monospace", letterSpacing: "0.2em" }}
           />
           {error && (
             <div style={{
@@ -108,7 +108,7 @@ export default function Developer() {
               {Object.entries(stats.runs_by_status).map(([k, v]) => (
                 <div key={k}>
                   <span style={{ color: "var(--muted)", fontSize: 12, textTransform: "capitalize" }}>{k}: </span>
-                  <span style={{ fontWeight: 700 }}>{v}</span>
+                  <span style={{ fontWeight: 600 }}>{v}</span>
                 </div>
               ))}
             </div>

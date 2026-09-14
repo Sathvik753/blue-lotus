@@ -20,7 +20,7 @@ function LegalShell({ title, children }) {
       <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 40 }}>
         <Link to="/" style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <Logo size={34} />
-          <span className="gradient-text" style={{ fontFamily: "Syne, sans-serif", fontWeight: 800 }}>Blue Lotus</span>
+          <span className="gradient-text" style={{ fontFamily: "var(--font)", fontWeight: 600 }}>Blue Lotus</span>
         </Link>
         <Link to="/" style={{ color: "var(--muted)", fontSize: 13 }}>← Home</Link>
       </header>
@@ -43,7 +43,7 @@ function LegalShell({ title, children }) {
 }
 
 const H = ({ children }) => (
-  <h2 style={{ fontSize: 17, fontWeight: 700, color: "var(--white)", margin: "28px 0 8px" }}>{children}</h2>
+  <h2 style={{ fontSize: 17, fontWeight: 600, color: "var(--white)", margin: "28px 0 8px" }}>{children}</h2>
 );
 const P = ({ children }) => <p style={{ margin: "0 0 12px" }}>{children}</p>;
 const UL = ({ children }) => (

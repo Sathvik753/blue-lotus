@@ -1,6 +1,11 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap');
+/* Inter is the cross-platform stand-in for SF Pro; on Apple devices the
+   system SF Pro fonts render first, matching apple.com exactly. */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 :root {
+  /* Apple's type family — SF Pro on Apple, Inter everywhere else. */
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
+          "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
   --navy:   #060B14;
   --dark:   #0B1521;
   --card:   #0F1C2B;
@@ -27,10 +32,12 @@ html { scroll-behavior: smooth; }
 body {
   background: var(--navy);
   color: var(--white);
-  font-family: 'DM Sans', sans-serif;
+  font-family: var(--font);
   font-size: 14px;
   line-height: 1.6;
+  letter-spacing: -0.01em;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
 }
 
@@ -67,14 +74,15 @@ body::after {
   100% { transform: translate3d(-2%, -1%, 0) scale(1.03); }
 }
 
+/* Apple: SF Pro Display, weight 600, tight negative tracking. */
 h1, h2, h3, h4 {
-  font-family: 'Syne', sans-serif;
-  font-weight: 700;
+  font-family: var(--font);
+  font-weight: 600;
   letter-spacing: -0.02em;
   color: var(--white);
 }
 
-code, .mono { font-family: 'DM Mono', monospace; }
+code, .mono { font-family: ui-monospace, "SF Mono", "Menlo", monospace; }
 
 .gradient-text {
   background: linear-gradient(100deg, var(--white) 10%, var(--teal-2) 55%, var(--gold-2) 95%);
@@ -122,7 +130,7 @@ input, select, textarea {
   border: 1px solid var(--border);
   border-radius: 10px;
   color: var(--white);
-  font-family: 'DM Sans', sans-serif;
+  font-family: var(--font);
   font-size: 14px;
   padding: 11px 14px;
   width: 100%;
@@ -136,51 +144,48 @@ input:focus, select:focus, textarea:focus {
 }
 input::placeholder, textarea::placeholder { color: var(--muted); }
 
-/* Buttons */
+/* Buttons — Apple capsule pills: fully rounded, solid fill, no caps,
+   no letter-spacing, no shimmer. Hover just brightens/darkens slightly. */
 .btn {
   position: relative;
   border: none;
-  border-radius: 10px;
+  border-radius: 980px;
   cursor: pointer;
-  font-family: 'Syne', sans-serif;
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  font-family: var(--font);
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
   padding: 11px 22px;
-  transition: transform 0.18s ease, box-shadow 0.25s ease, background 0.25s, border-color 0.2s, color 0.2s;
-  text-transform: uppercase;
-  overflow: hidden;
+  transition: background 0.2s ease, color 0.2s ease, opacity 0.2s ease, border-color 0.2s ease;
+  text-transform: none;
+  white-space: nowrap;
 }
 .btn-primary {
-  background: linear-gradient(120deg, var(--gold-2), var(--gold));
+  background: var(--gold);
   color: #1A1402;
-  box-shadow: 0 8px 22px -8px var(--glow-gold);
 }
-.btn-primary:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 14px 30px -8px var(--glow-gold);
-}
-.btn-primary::after {
-  content: "";
-  position: absolute; top: 0; left: -120%;
-  width: 60%; height: 100%;
-  background: linear-gradient(110deg, transparent, rgba(255,255,255,0.55), transparent);
-  transform: skewX(-20deg);
-  transition: left 0.6s ease;
-}
-.btn-primary:hover:not(:disabled)::after { left: 130%; }
+.btn-primary:hover:not(:disabled) { background: var(--gold-2); }
 .btn-secondary {
-  background: rgba(255,255,255,0.03);
-  border: 1px solid var(--border);
-  color: var(--light);
+  background: rgba(255,255,255,0.08);
+  color: var(--white);
 }
-.btn-secondary:hover:not(:disabled) {
-  border-color: var(--gold);
-  color: var(--gold);
-  transform: translateY(-1px);
-}
+.btn-secondary:hover:not(:disabled) { background: rgba(255,255,255,0.14); }
 .btn-danger { background: var(--rose); color: white; }
-.btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; box-shadow: none; }
+.btn-danger:hover:not(:disabled) { background: #e9694f; }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Apple text link with a trailing chevron. */
+.link-chevron {
+  color: var(--teal-2);
+  font-weight: 400;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  transition: opacity 0.2s;
+}
+.link-chevron::after { content: "\203A"; font-weight: 500; transition: transform 0.2s; }
+.link-chevron:hover { text-decoration: underline; }
+.link-chevron:hover::after { transform: translateX(2px); }
 
 /* Labels */
 label {
@@ -223,9 +228,9 @@ label {
   margin-bottom: 8px;
 }
 .metric-value {
-  font-family: 'Syne', sans-serif;
+  font-family: var(--font);
   font-size: 27px;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--white);
   letter-spacing: -0.02em;
 }
@@ -321,9 +326,9 @@ tbody tr:hover td { background: rgba(33,208,173,0.05); }
 }
 
 .section-title {
-  font-family: 'Syne', sans-serif;
+  font-family: var(--font);
   font-size: 18px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--white);
   margin-bottom: 16px;
 }
@@ -373,35 +378,34 @@ tbody tr:hover td { background: rgba(33,208,173,0.05); }
   display: flex; align-items: center; justify-content: space-between;
 }
 .bl-nav-links { display: flex; align-items: center; gap: 22px; }
-.bl-nav-links a { color: var(--muted); font-size: 13px; transition: color 0.2s; }
-.bl-nav-links a:hover { color: var(--light); }
+.bl-nav-links a { color: var(--light); font-size: 14px; font-weight: 400; transition: color 0.2s; }
+.bl-nav-links a:hover { color: var(--teal-2); }
 
 /* Section shell */
 .bl-section { max-width: 1160px; margin: 0 auto; padding: 96px 24px; }
 .bl-section--tight { padding: 64px 24px; }
+/* Apple eyebrow: a short colored line above the headline — no pill, no caps. */
 .bl-kicker {
-  font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.18em;
-  text-transform: uppercase; color: var(--teal-2);
+  font-size: 17px; font-weight: 600; letter-spacing: -0.01em; color: var(--teal-2);
 }
 .bl-eyebrow {
-  display: inline-block; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase;
-  color: var(--teal-2); border: 1px solid var(--border-soft); border-radius: 999px;
-  padding: 7px 16px;
+  display: inline-block; font-size: clamp(18px, 2.4vw, 21px); font-weight: 600;
+  letter-spacing: -0.015em; color: var(--teal-2);
 }
 
 /* Hero */
 .bl-hero { text-align: center; padding: 84px 24px 40px; max-width: 1160px; margin: 0 auto; }
 .bl-hero h1 {
-  font-size: clamp(40px, 7vw, 78px); line-height: 1.03; letter-spacing: -0.035em;
-  margin: 26px auto 20px; max-width: 15ch;
+  font-size: clamp(40px, 7vw, 80px); line-height: 1.05; letter-spacing: -0.025em;
+  font-weight: 600; margin: 14px auto 20px; max-width: 15ch;
 }
 .bl-hero-sub {
-  color: var(--muted); font-size: clamp(16px, 2vw, 20px); line-height: 1.55;
-  max-width: 620px; margin: 0 auto 30px;
+  color: var(--light); font-size: clamp(19px, 2.1vw, 23px); line-height: 1.4; font-weight: 400;
+  letter-spacing: -0.012em; max-width: 640px; margin: 0 auto 30px;
 }
-.bl-cta-row { display: flex; gap: 14px; justify-content: center; align-items: center; flex-wrap: wrap; }
-.bl-btn-lg { padding: 15px 34px; font-size: 14px; display: inline-flex; align-items: center; gap: 9px; }
-.bl-fine { color: var(--muted); font-size: 13px; margin-top: 16px; }
+.bl-cta-row { display: flex; gap: 22px; justify-content: center; align-items: center; flex-wrap: wrap; }
+.bl-btn-lg { padding: 13px 28px; font-size: 17px; font-weight: 400; display: inline-flex; align-items: center; gap: 8px; }
+.bl-fine { color: var(--muted); font-size: 14px; margin-top: 18px; letter-spacing: -0.01em; }
 .bl-fine b { color: var(--light); font-weight: 600; }
 
 /* Interactive 3D risk surface */
@@ -441,8 +445,8 @@ tbody tr:hover td { background: rgba(33,208,173,0.05); }
 .hero-chip--dd   { top: 16%; left: 6%; }
 .hero-chip--tail { bottom: 16%; left: 10%; animation-delay: -2.3s; }
 .hero-chip--frag { top: 22%; right: 7%; animation-delay: -4.6s; }
-.hero-chip-label { font-family: 'DM Mono', monospace; font-size: 9.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
-.hero-chip-value { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 19px; color: var(--rose); letter-spacing: -0.01em; }
+.hero-chip-label { font-family: var(--font); font-size: 9.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.hero-chip-value { font-family: var(--font); font-weight: 600; font-size: 19px; color: var(--rose); letter-spacing: -0.01em; }
 .hero-chip-value--ok { color: var(--teal-2); }
 @keyframes chipFloat {
   0%, 100% { transform: translateZ(var(--z,40px)) translateY(0); }
@@ -484,7 +488,7 @@ tbody tr:hover td { background: rgba(33,208,173,0.05); }
   background: linear-gradient(160deg, rgba(18,34,54,0.7), rgba(11,21,33,0.5));
   border: 1px solid var(--border-soft);
 }
-.bl-stat-num { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 34px; letter-spacing: -0.02em; }
+.bl-stat-num { font-family: var(--font); font-weight: 600; font-size: 34px; letter-spacing: -0.02em; }
 .bl-stat-num .u { font-size: 18px; color: var(--muted); }
 .bl-stat-cap { color: var(--muted); font-size: 13px; margin-top: 6px; line-height: 1.5; }
 
@@ -528,9 +532,9 @@ tbody tr:hover td { background: rgba(33,208,173,0.05); }
   color: #1A1402; background: linear-gradient(120deg, var(--gold-2), var(--gold));
   border-radius: 999px; padding: 4px 12px; white-space: nowrap;
 }
-.bl-plan-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 17px; }
+.bl-plan-name { font-family: var(--font); font-weight: 600; font-size: 17px; }
 .bl-plan-price { margin: 14px 0 4px; display: flex; align-items: baseline; gap: 4px; }
-.bl-plan-price .amt { font-size: 32px; font-weight: 800; font-family: 'Syne', sans-serif; letter-spacing: -0.02em; }
+.bl-plan-price .amt { font-size: 32px; font-weight: 600; font-family: var(--font); letter-spacing: -0.02em; }
 .bl-plan-price .per { color: var(--muted); font-size: 13px; }
 .bl-plan-blurb { color: var(--muted); font-size: 12.5px; line-height: 1.5; min-height: 54px; margin-bottom: 16px; }
 .bl-plan-feats { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; flex: 1; }

@@ -33,7 +33,7 @@ function CiBadge({ lo, hi, isDay = false }) {
   if (lo == null || hi == null || isNaN(lo) || isNaN(hi)) return null;
   const fmt = isDay ? v => `${v.toFixed(0)}d` : v => pct(v);
   return (
-    <div style={{ fontSize: 10, color: MUTED, marginTop: 5, fontFamily: "DM Mono, monospace" }}>
+    <div style={{ fontSize: 10, color: MUTED, marginTop: 5, fontFamily: "ui-monospace, SF Mono, Menlo, monospace" }}>
       90% CI: [{fmt(lo)}, {fmt(hi)}]
     </div>
   );
@@ -114,7 +114,7 @@ function StatRow({ label, value, description, ci }) {
   return (
     <div>
       <div style={{ fontSize: 10, color: MUTED, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 2 }}>{label}</div>
-      <div style={{ fontFamily: "DM Mono, monospace", fontSize: 15, color: "var(--white)", marginBottom: 2 }}>{value}</div>
+      <div style={{ fontFamily: "ui-monospace, SF Mono, Menlo, monospace", fontSize: 15, color: "var(--white)", marginBottom: 2 }}>{value}</div>
       {ci && <CiBadge lo={ci.lo} hi={ci.hi} />}
       {description && <div style={{ fontSize: 11, color: MUTED, opacity: 0.8, marginTop: 4 }}>{description}</div>}
     </div>
@@ -145,7 +145,7 @@ function WassersteinRow({ name, value, max }) {
     <div style={{ marginBottom: 10 }}>
       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3, fontSize: 11 }}>
         <span style={{ color: "var(--muted)" }}>{labels[name] || name}</span>
-        <span style={{ fontFamily: "DM Mono, monospace", color: GOLD, fontSize: 11 }}>
+        <span style={{ fontFamily: "ui-monospace, SF Mono, Menlo, monospace", color: GOLD, fontSize: 11 }}>
           W₁ = {value?.toFixed(6)}
         </span>
       </div>
@@ -171,15 +171,15 @@ function BacktestRow({ br }) {
       </div>
       <div style={{ textAlign: "right" }}>
         <div style={{ fontSize: 10, color: MUTED, marginBottom: 2 }}>Realized DD</div>
-        <div style={{ fontFamily: "DM Mono, monospace", color: ROSE }}>{pct(br.realized_max_dd)}</div>
+        <div style={{ fontFamily: "ui-monospace, SF Mono, Menlo, monospace", color: ROSE }}>{pct(br.realized_max_dd)}</div>
       </div>
       <div style={{ textAlign: "right" }}>
         <div style={{ fontSize: 10, color: MUTED, marginBottom: 2 }}>Predicted P5</div>
-        <div style={{ fontFamily: "DM Mono, monospace", color: GOLD }}>{pct(br.predicted_dd_p5)}</div>
+        <div style={{ fontFamily: "ui-monospace, SF Mono, Menlo, monospace", color: GOLD }}>{pct(br.predicted_dd_p5)}</div>
       </div>
       <div style={{ textAlign: "right" }}>
         <div style={{ fontSize: 10, color: MUTED, marginBottom: 2 }}>Ratio</div>
-        <div style={{ fontFamily: "DM Mono, monospace", color: br.coverage_ratio > 1 ? ROSE : TEAL }}>
+        <div style={{ fontFamily: "ui-monospace, SF Mono, Menlo, monospace", color: br.coverage_ratio > 1 ? ROSE : TEAL }}>
           {br.coverage_ratio?.toFixed(2)}×
         </div>
       </div>
@@ -464,7 +464,7 @@ export default function Results() {
                     <span style={{ color: "var(--light)" }}>{name}</span>
                     <span style={{ color: MUTED, fontSize: 11, marginLeft: 8 }}>{desc}</span>
                   </div>
-                  <span style={{ color, fontFamily: "DM Mono, monospace", fontWeight: 600 }}>
+                  <span style={{ color, fontFamily: "ui-monospace, SF Mono, Menlo, monospace", fontWeight: 600 }}>
                     {val ? (val * 100).toFixed(1) + "%" : "—"}
                   </span>
                 </div>
@@ -479,7 +479,7 @@ export default function Results() {
               {[["AIC", hmm.aic], ["BIC", hmm.bic], ["Log-likelihood", hmm.log_likelihood]].map(([label, val]) => (
                 <div key={label}>
                   <div style={{ fontSize: 10, color: MUTED, marginBottom: 2 }}>{label}</div>
-                  <div style={{ fontFamily: "DM Mono, monospace", fontSize: 11, color: "var(--white)" }}>
+                  <div style={{ fontFamily: "ui-monospace, SF Mono, Menlo, monospace", fontSize: 11, color: "var(--white)" }}>
                     {val != null ? val.toFixed(0) : "—"}
                   </div>
                 </div>
@@ -548,7 +548,7 @@ export default function Results() {
                 <div key={name}>
                   <span style={{ color, fontWeight: 600, marginRight: 6 }}>●</span>
                   <span style={{ color: MUTED, fontSize: 12, marginRight: 4 }}>{name}:</span>
-                  <span style={{ fontFamily: "DM Mono, monospace", fontSize: 12, color: "var(--white)" }}>
+                  <span style={{ fontFamily: "ui-monospace, SF Mono, Menlo, monospace", fontSize: 12, color: "var(--white)" }}>
                     {val != null && !isNaN(val) ? pct(val) : "—"}
                   </span>
                 </div>
@@ -626,7 +626,7 @@ export default function Results() {
             ].map(([label, val]) => (
               <div key={label} style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, fontSize: 12 }}>
                 <span style={{ color: MUTED }}>{label}</span>
-                <span style={{ fontFamily: "DM Mono, monospace", color: "var(--white)" }}>{val}</span>
+                <span style={{ fontFamily: "ui-monospace, SF Mono, Menlo, monospace", color: "var(--white)" }}>{val}</span>
               </div>
             ))}
           </div>
@@ -643,7 +643,7 @@ export default function Results() {
             ].map(([label, val]) => (
               <div key={label} style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, fontSize: 12 }}>
                 <span style={{ color: MUTED }}>{label}</span>
-                <span style={{ fontFamily: "DM Mono, monospace", color: "var(--white)", fontSize: 11 }}>{val}</span>
+                <span style={{ fontFamily: "ui-monospace, SF Mono, Menlo, monospace", color: "var(--white)", fontSize: 11 }}>{val}</span>
               </div>
             ))}
           </div>
@@ -660,7 +660,7 @@ export default function Results() {
             ].map(([label, val]) => (
               <div key={label} style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, fontSize: 12 }}>
                 <span style={{ color: MUTED }}>{label}</span>
-                <span style={{ fontFamily: "DM Mono, monospace", color: "var(--white)" }}>{val || "—"}</span>
+                <span style={{ fontFamily: "ui-monospace, SF Mono, Menlo, monospace", color: "var(--white)" }}>{val || "—"}</span>
               </div>
             ))}
           </div>

@@ -31,7 +31,7 @@ export default function Status() {
       <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 40 }}>
         <Link to="/" style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <Logo size={34} />
-          <span className="gradient-text" style={{ fontFamily: "Syne, sans-serif", fontWeight: 800 }}>Blue Lotus</span>
+          <span className="gradient-text" style={{ fontFamily: "var(--font)", fontWeight: 600 }}>Blue Lotus</span>
         </Link>
         <Link to="/" style={{ color: "var(--muted)", fontSize: 13 }}>← Home</Link>
       </header>
@@ -42,7 +42,7 @@ export default function Status() {
             width: 12, height: 12, borderRadius: "50%", background: COLORS[overall],
             boxShadow: `0 0 12px ${COLORS[overall]}`,
           }} />
-          <span style={{ fontSize: 20, fontFamily: "Syne, sans-serif", fontWeight: 700 }}>
+          <span style={{ fontSize: 20, fontFamily: "var(--font)", fontWeight: 600 }}>
             {err ? "Cannot reach API" : overall === "operational" ? "All systems operational" : "Partial degradation"}
           </span>
         </div>

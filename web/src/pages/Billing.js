@@ -49,7 +49,7 @@ export default function Billing() {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <div>
               <div style={{ fontSize: 12, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.1em" }}>Current plan</div>
-              <div style={{ fontSize: 24, fontFamily: "Syne, sans-serif", fontWeight: 800 }}>
+              <div style={{ fontSize: 24, fontFamily: "var(--font)", fontWeight: 600 }}>
                 {status.plan_name}
                 <span className="status-pill" style={{
                   fontSize: 11, marginLeft: 10, padding: "3px 10px", borderRadius: 999,
@@ -91,9 +91,9 @@ export default function Billing() {
             <div key={p.tier} className="card" style={{
               borderColor: current ? "rgba(33,208,173,0.4)" : "var(--border-soft)",
             }}>
-              <div style={{ fontFamily: "Syne, sans-serif", fontWeight: 700, fontSize: 16 }}>{p.name}</div>
+              <div style={{ fontFamily: "var(--font)", fontWeight: 600, fontSize: 16 }}>{p.name}</div>
               <div style={{ margin: "10px 0 4px" }}>
-                <span style={{ fontSize: 28, fontWeight: 800 }}>
+                <span style={{ fontSize: 28, fontWeight: 600 }}>
                   {p.price_usd == null ? "Custom" : p.price_usd === 0 ? "$0" : `$${p.price_usd.toLocaleString()}`}
                 </span>
                 {p.price_usd ? <span style={{ color: "var(--muted)", fontSize: 12 }}> /mo</span> : null}

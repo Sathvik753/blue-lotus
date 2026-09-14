@@ -231,7 +231,7 @@ export default function NewRun() {
                 gap: 8, padding: "10px 12px", borderRadius: 7, border: "none",
                 background: mode === id ? "var(--card)" : "transparent",
                 color: mode === id ? "var(--gold)" : "var(--muted)",
-                fontFamily: "Syne, sans-serif", fontWeight: 600,
+                fontFamily: "var(--font)", fontWeight: 600,
                 fontSize: 12, letterSpacing: "0.05em", textTransform: "uppercase",
                 cursor: "pointer", transition: "all 0.15s",
                 boxShadow: mode === id ? "0 1px 3px rgba(0,0,0,0.3)" : "none",
@@ -262,7 +262,7 @@ export default function NewRun() {
                     placeholder="SPY, AAPL, BTC-USD…"
                     value={ticker}
                     onChange={e => setTicker(e.target.value.toUpperCase())}
-                    style={{ fontFamily: "DM Mono, monospace", letterSpacing: "0.05em" }}
+                    style={{ fontFamily: "ui-monospace, SF Mono, Menlo, monospace", letterSpacing: "0.05em" }}
                   />
                 </div>
                 <div>
@@ -293,7 +293,7 @@ export default function NewRun() {
                 value={pasteText}
                 onChange={e => onPasteChange(e.target.value)}
                 style={{
-                  resize: "vertical", fontFamily: "DM Mono, monospace",
+                  resize: "vertical", fontFamily: "ui-monospace, SF Mono, Menlo, monospace",
                   fontSize: 12, lineHeight: 1.7,
                 }}
               />

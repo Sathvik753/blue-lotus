@@ -24,7 +24,7 @@ function navStyle({ isActive }) {
       : "transparent",
     boxShadow: isActive ? "inset 0 0 0 1px rgba(212,172,13,0.25)" : "none",
     textDecoration: "none", fontSize: 13.5, fontWeight: 600,
-    fontFamily: "Syne, sans-serif", letterSpacing: "0.01em",
+    fontFamily: "var(--font)", letterSpacing: "0.01em",
     transition: "all 0.18s ease",
   };
 }
@@ -75,7 +75,7 @@ export default function Layout() {
           <Logo size={42} />
           <div>
             <div style={{
-              fontFamily: "Syne, sans-serif", fontWeight: 800, fontSize: 17,
+              fontFamily: "var(--font)", fontWeight: 600, fontSize: 17,
               letterSpacing: "-0.02em", lineHeight: 1,
             }} className="gradient-text">
               Blue Lotus
@@ -106,7 +106,7 @@ export default function Layout() {
                 <span style={{
                   fontSize: 9.5, textTransform: "uppercase", letterSpacing: "0.08em",
                   color: "var(--gold)", background: "rgba(212,172,13,0.12)",
-                  padding: "2px 7px", borderRadius: 999, fontWeight: 700,
+                  padding: "2px 7px", borderRadius: 999, fontWeight: 600,
                 }}>{user.plan}</span>
                 <span style={{ fontSize: 10.5, color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {user.email}
@@ -117,7 +117,7 @@ export default function Layout() {
           <button onClick={handleLogout} style={{
             display: "flex", alignItems: "center", gap: 8, width: "100%",
             background: "none", border: "none", cursor: "pointer",
-            color: "var(--muted)", fontSize: 12.5, padding: "6px 0", fontFamily: "Syne, sans-serif", fontWeight: 600,
+            color: "var(--muted)", fontSize: 12.5, padding: "6px 0", fontFamily: "var(--font)", fontWeight: 600,
           }}>
             <LogOut size={14} /> Sign out
           </button>
