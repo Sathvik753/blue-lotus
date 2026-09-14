@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Check, ArrowRight, ShieldCheck, Activity, GitBranch, FileText } from "lucide-react";
 import Logo from "../components/Logo";
 import HeroCanvas from "../components/HeroCanvas";
+import Card3D from "../components/Card3D";
 import { api } from "../utils/api";
 import { useAuth } from "../context/Auth";
 
@@ -120,10 +121,14 @@ export default function Landing() {
         </div>
         <div className="bl-panels">
           {HIGHLIGHTS.map(({ icon: Icon, title, body }, i) => (
-            <div key={title} className="bl-panel reveal" style={{ transitionDelay: `${i * 90}ms` }}>
-              <div className="bl-panel-icn"><Icon size={22} color="var(--teal-2)" /></div>
-              <h3>{title}</h3>
-              <p>{body}</p>
+            <div key={title} className="reveal" style={{ transitionDelay: `${i * 90}ms` }}>
+              <Card3D className={`bl-panel ${i === 0 ? "bl-panel--wide" : ""}`}>
+                <div className="bl-panel-icn"><Icon size={i === 0 ? 28 : 22} color="var(--teal-2)" /></div>
+                <div className="bl-panel-txt">
+                  <h3>{title}</h3>
+                  <p>{body}</p>
+                </div>
+              </Card3D>
             </div>
           ))}
         </div>
@@ -140,9 +145,11 @@ export default function Landing() {
         </p>
         <div className="bl-stat-row">
           {STATS.map((s, i) => (
-            <div key={i} className="bl-stat reveal" style={{ transitionDelay: `${i * 90}ms` }}>
-              <div className="bl-stat-num">{s.num}</div>
-              <div className="bl-stat-cap">{s.cap}</div>
+            <div key={i} className="reveal" style={{ transitionDelay: `${i * 90}ms` }}>
+              <Card3D className="bl-stat" tilt={9} lift={18}>
+                <div className="bl-stat-num">{s.num}</div>
+                <div className="bl-stat-cap">{s.cap}</div>
+              </Card3D>
             </div>
           ))}
         </div>
@@ -150,26 +157,28 @@ export default function Landing() {
 
       {/* Research */}
       <section id="research" className="bl-section bl-section--tight">
-        <div className="bl-research reveal">
-          <div>
-            <div className="bl-kicker">Research</div>
-            <h2>The engine, in full detail.</h2>
-            <p>
-              Read the methodology and the out-of-sample evidence behind Blue Lotus —
-              regime modeling, Extreme Value tails, and a walk-forward validation across
-              744 asset-years that benchmarks the engine against naive baselines.
-            </p>
-          </div>
-          <div className="bl-research-btns">
-            <a href="/engine-paper.pdf" target="_blank" rel="noopener noreferrer"
-              className="btn btn-primary" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-              <FileText size={15} /> Engine paper
-            </a>
-            <a href="/validation-paper.pdf" target="_blank" rel="noopener noreferrer"
-              className="btn btn-secondary" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-              <FileText size={15} /> Validation study
-            </a>
-          </div>
+        <div className="reveal">
+          <Card3D className="bl-research" tilt={4} lift={20}>
+            <div>
+              <div className="bl-kicker">Research</div>
+              <h2>The engine, in full detail.</h2>
+              <p>
+                Read the methodology and the out-of-sample evidence behind Blue Lotus —
+                regime modeling, Extreme Value tails, and a walk-forward validation across
+                744 asset-years that benchmarks the engine against naive baselines.
+              </p>
+            </div>
+            <div className="bl-research-btns">
+              <a href="/engine-paper.pdf" target="_blank" rel="noopener noreferrer"
+                className="btn btn-primary" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                <FileText size={15} /> Engine paper
+              </a>
+              <a href="/validation-paper.pdf" target="_blank" rel="noopener noreferrer"
+                className="btn btn-secondary" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                <FileText size={15} /> Validation study
+              </a>
+            </div>
+          </Card3D>
         </div>
       </section>
 
@@ -187,23 +196,25 @@ export default function Landing() {
               : p.tier === "custom" ? "Get started"
               : `Choose ${p.name}`;
             return (
-              <div key={p.tier} className={`bl-plan reveal ${pop ? "bl-plan--pop" : ""}`} style={{ transitionDelay: `${i * 70}ms` }}>
-                {pop && <div className="bl-plan-tag">Most popular</div>}
-                <div className="bl-plan-name">{p.name}</div>
-                <div className="bl-plan-price">
-                  <span className="amt">{amt}</span>
-                  {per && <span className="per">{per}</span>}
-                </div>
-                <div className="bl-plan-blurb">{p.blurb}</div>
-                <div className="bl-plan-feats">
-                  {p.features.map((f) => (
-                    <div key={f} className="bl-plan-feat">
-                      <Check size={14} color="var(--teal-2)" style={{ marginTop: 2, flexShrink: 0 }} />
-                      <span>{f}</span>
-                    </div>
-                  ))}
-                </div>
-                <Link to="/register" className={`btn ${pop ? "btn-primary" : "btn-secondary"}`}>{label}</Link>
+              <div key={p.tier} className="reveal" style={{ transitionDelay: `${i * 70}ms` }}>
+                <Card3D className={`bl-plan ${pop ? "bl-plan--pop" : ""}`} tilt={6} lift={20}>
+                  {pop && <div className="bl-plan-tag">Most popular</div>}
+                  <div className="bl-plan-name">{p.name}</div>
+                  <div className="bl-plan-price">
+                    <span className="amt">{amt}</span>
+                    {per && <span className="per">{per}</span>}
+                  </div>
+                  <div className="bl-plan-blurb">{p.blurb}</div>
+                  <div className="bl-plan-feats">
+                    {p.features.map((f) => (
+                      <div key={f} className="bl-plan-feat">
+                        <Check size={14} color="var(--teal-2)" style={{ marginTop: 2, flexShrink: 0 }} />
+                        <span>{f}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <Link to="/register" className={`btn ${pop ? "btn-primary" : "btn-secondary"}`}>{label}</Link>
+                </Card3D>
               </div>
             );
           })}
