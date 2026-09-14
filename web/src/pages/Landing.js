@@ -93,12 +93,11 @@ export default function Landing() {
 
       {/* Hero */}
       <header className="bl-hero">
-        <span className="bl-eyebrow">Institutional stress-testing, on demand</span>
-        <h1>Know how bad it can get <span className="gradient-text">before it does.</span></h1>
+        <span className="bl-eyebrow">Welcome to Blue Lotus Labs</span>
+        <h1>Institutional trading software <span className="gradient-text">made accessible.</span></h1>
         <p className="bl-hero-sub">
-          Blue Lotus turns any return series into a forward distribution of drawdown,
-          tail-loss, and recovery — with confidence intervals and a model-fragility
-          score on every run.
+          Blue Lotus stress-tests your strategies and investments using
+          bleeding-edge financial mathematics.
         </p>
         <div className="bl-cta-row">
           <Link to="/register" className="btn btn-primary bl-btn-lg">
