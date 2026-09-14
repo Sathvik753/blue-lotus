@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://bluelotuslabs.net/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://bluelotuslabs.net/status</loc><changefreq>daily</changefreq><priority>0.5</priority></url>
+  <url><loc>https://bluelotuslabs.net/terms</loc><changefreq>monthly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://bluelotuslabs.net/privacy</loc><changefreq>monthly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://bluelotuslabs.net/disclaimer</loc><changefreq>monthly</changefreq><priority>0.3</priority></url>
+</urlset>
