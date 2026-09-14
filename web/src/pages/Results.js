@@ -10,10 +10,10 @@ import {
   AlertTriangle, CheckCircle, XCircle, ChevronDown, ChevronUp,
 } from "lucide-react";
 
-const GOLD = "#D4AC0D";
+const GOLD = "#3DE0BE";   // retired gold -> light teal
 const TEAL = "#148F77";
 const ROSE = "#C0392B";
-const BLUE = "#1B4F72";
+const BLUE = "#5A6B72";   // retired blue -> neutral slate
 const MUTED = "#5D7A99";
 
 

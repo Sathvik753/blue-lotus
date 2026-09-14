@@ -41,8 +41,8 @@ export default function Logo({ size = 40, animated = true }) {
       fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Blue Lotus">
       <defs>
         <linearGradient id={back} x1="100" y1="150" x2="100" y2="55" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stopColor="#0F2B45" />
-          <stop offset="1" stopColor="#1B4F72" />
+          <stop offset="0" stopColor="#0A2C28" />
+          <stop offset="1" stopColor="#134E45" />
         </linearGradient>
         <linearGradient id={mid} x1="100" y1="150" x2="100" y2="50" gradientUnits="userSpaceOnUse">
           <stop offset="0" stopColor="#127A66" />
@@ -50,8 +50,8 @@ export default function Logo({ size = 40, animated = true }) {
         </linearGradient>
         <linearGradient id={front} x1="100" y1="150" x2="100" y2="50" gradientUnits="userSpaceOnUse">
           <stop offset="0" stopColor="#18A88B" />
-          <stop offset="0.55" stopColor="#D4AC0D" />
-          <stop offset="1" stopColor="#F2CB3A" />
+          <stop offset="0.55" stopColor="#21D0AD" />
+          <stop offset="1" stopColor="#3DE0BE" />
         </linearGradient>
         <linearGradient id={stroke} x1="100" y1="150" x2="100" y2="55" gradientUnits="userSpaceOnUse">
           <stop offset="0" stopColor="rgba(255,255,255,0)" />
@@ -59,8 +59,8 @@ export default function Logo({ size = 40, animated = true }) {
         </linearGradient>
         <radialGradient id={halo} cx="0.5" cy="0.5" r="0.5">
           <stop offset="0" stopColor="#21D0AD" stopOpacity="0.55" />
-          <stop offset="0.55" stopColor="#1B4F72" stopOpacity="0.25" />
-          <stop offset="1" stopColor="#1B4F72" stopOpacity="0" />
+          <stop offset="0.55" stopColor="#0E3B38" stopOpacity="0.25" />
+          <stop offset="1" stopColor="#0E3B38" stopOpacity="0" />
         </radialGradient>
       </defs>
 
@@ -76,8 +76,8 @@ export default function Logo({ size = 40, animated = true }) {
             opacity={p.layer === "back" ? 0.92 : 1} />
         ))}
         {/* seed of light at the heart of the flower */}
-        <circle cx="100" cy="138" r="7" fill="#F7E08A" opacity="0.9" />
-        <circle cx="100" cy="138" r="3" fill="#FFFDF2" />
+        <circle cx="100" cy="138" r="7" fill="#9EF0DC" opacity="0.9" />
+        <circle cx="100" cy="138" r="3" fill="#EAFBF6" />
       </g>
     </svg>
   );

@@ -135,10 +135,10 @@ export default function HeroCanvas() {
           if (s === 0) ctx.moveTo(X(s), y); else ctx.lineTo(X(s), y);
         }
         if (p.tail) {
-          ctx.strokeStyle = "rgba(224,86,63,0.55)";
-          ctx.lineWidth = 1.4;
-          ctx.shadowColor = "rgba(224,86,63,0.5)";
-          ctx.shadowBlur = 6;
+          ctx.strokeStyle = "rgba(216,96,76,0.42)";
+          ctx.lineWidth = 1.3;
+          ctx.shadowColor = "rgba(216,96,76,0.35)";
+          ctx.shadowBlur = 5;
         } else {
           ctx.strokeStyle = `rgba(33,208,173,${0.10 + (i % 5) * 0.03})`;
           ctx.lineWidth = 1;
@@ -155,9 +155,9 @@ export default function HeroCanvas() {
         const y = Y(mid) + shimmer;
         if (s === 0) ctx.moveTo(X(s), y); else ctx.lineTo(X(s), y);
       }
-      ctx.strokeStyle = "rgba(242,203,58,0.9)";
+      ctx.strokeStyle = "rgba(240,246,244,0.92)";
       ctx.lineWidth = 1.8;
-      ctx.shadowColor = "rgba(212,172,13,0.6)";
+      ctx.shadowColor = "rgba(33,208,173,0.55)";
       ctx.shadowBlur = 8;
       ctx.stroke();
       ctx.shadowBlur = 0;
@@ -166,8 +166,8 @@ export default function HeroCanvas() {
       if (!reduce && reveal < 1) {
         const hx = X(cut);
         const g = ctx.createLinearGradient(hx - 40, 0, hx, 0);
-        g.addColorStop(0, "rgba(242,203,58,0)");
-        g.addColorStop(1, "rgba(242,203,58,0.5)");
+        g.addColorStop(0, "rgba(33,208,173,0)");
+        g.addColorStop(1, "rgba(33,208,173,0.5)");
         ctx.strokeStyle = g;
         ctx.lineWidth = 2;
         ctx.beginPath(); ctx.moveTo(hx, padTop); ctx.lineTo(hx, H - padBot); ctx.stroke();
