@@ -52,6 +52,10 @@ export default function Landing() {
 
   return (
     <div className="bl-page fade-in">
+      {/* One continuous interactive graph behind the whole page */}
+      <div className="site-bg" aria-hidden="true"><HeroCanvas /></div>
+      <div className="site-scrim" aria-hidden="true" />
+
       {/* Nav */}
       <nav className="bl-nav">
         <div className="bl-nav-inner">
@@ -75,14 +79,11 @@ export default function Landing() {
         </div>
       </nav>
 
-      {/* Hero — the animated risk graph is the background behind the title */}
+      {/* Hero — the title floats on the page-wide graph */}
       <header className="hero">
-        <div className="hero-bg">
-          <HeroCanvas />
-          <span className="hero-label hero-label--dd">Max drawdown · p95<b>−38.4%</b></span>
-          <span className="hero-label hero-label--tail">Tail loss · CVaR₉₅<b>−6.1%</b></span>
-          <span className="hero-label hero-label--frag">Model fragility<b className="ok">Low · 0.21</b></span>
-        </div>
+        <span className="hero-label hero-label--dd">Max drawdown · p95<b>−38.4%</b></span>
+        <span className="hero-label hero-label--tail">Tail loss · CVaR₉₅<b>−6.1%</b></span>
+        <span className="hero-label hero-label--frag">Model fragility<b className="ok">Low · 0.21</b></span>
         <div className="hero-content">
           <span className="eyebrow">Welcome to Blue Lotus Labs</span>
           <h1 className="display">Institutional trading software <span className="gradient-text">made accessible.</span></h1>
@@ -98,10 +99,9 @@ export default function Landing() {
         </div>
       </header>
 
-      {/* Highlights — features embedded in the interactive graph background */}
-      <section className="sec sec--band feat-sec">
-        <div className="feat-bg"><HeroCanvas /></div>
-        <div className="wrap center reveal" style={{ position: "relative", zIndex: 1 }}>
+      {/* Highlights — borderless feature columns over the page-wide graph */}
+      <section className="sec feat-sec">
+        <div className="wrap center reveal">
           <span className="eyebrow">Get the highlights</span>
           <h2 className="h-lg">Built like a risk desk, not a demo.</h2>
         </div>

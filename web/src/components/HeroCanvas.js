@@ -8,8 +8,8 @@ import React, { useEffect, useRef } from "react";
  * the "product shot", not a boxed chart. Pure canvas, no libraries.
  */
 
-const N_PATHS = 72;
-const STEPS = 200;
+const N_PATHS = 110;
+const STEPS = 220;
 
 function rng(seed) {
   return function () {
@@ -30,10 +30,11 @@ function buildPaths() {
   const paths = [];
   for (let i = 0; i < N_PATHS; i++) {
     const tail = i % 12 === 0;
-    const drift = tail ? -0.0016 : 0.0005;
-    const vol = tail ? 0.017 : 0.010;
+    const drift = tail ? -0.0018 : 0.0005 * (i % 2 ? 1 : -1);
+    const vol = tail ? 0.019 : 0.013;
+    // start already spread out so there's no thin single origin point
+    let w = (r() - 0.5) * 0.5;
     const pts = new Array(STEPS);
-    let w = 0;
     for (let s = 0; s < STEPS; s++) { w += drift + vol * gauss(r); pts[s] = w; }
     paths.push({ pts, tail });
   }
@@ -77,8 +78,10 @@ export default function HeroCanvas() {
     resize();
     window.addEventListener("resize", resize);
 
-    const padY = 40;
-    const X = (s) => (s / (STEPS - 1)) * W;
+    // Bleed the field beyond all four edges so it fills the viewport — no
+    // thin origin, no empty bands top or bottom.
+    const padY = -H * 0.08;
+    const X = (s) => -0.18 * W + (s / (STEPS - 1)) * 1.36 * W;
     const Y = (v) => {
       const t = (v - vmin) / (vmax - vmin || 1);
       return padY + (1 - t) * (H - padY * 2);

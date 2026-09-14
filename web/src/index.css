@@ -394,9 +394,21 @@ tbody tr:hover td { background: rgba(33,208,173,0.05); }
 .bl-nav-links a:hover { color: var(--yellow-2); }
 .bl-nav-links a.btn { color: #04140F; text-decoration: none; }
 
+/* One continuous interactive graph behind the whole page — no dead black. */
+.bl-page { position: relative; }
+.bl-page > *:not(.site-bg):not(.site-scrim) { position: relative; z-index: 1; }
+.site-bg { position: fixed; inset: 0; z-index: 0; }
+.site-bg .hero-canvas { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0.9; }
+.site-scrim {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(0,0,0,0.45), rgba(0,0,0,0.20) 22%, rgba(0,0,0,0.20) 78%, rgba(0,0,0,0.48)),
+    radial-gradient(140% 90% at 50% 40%, transparent 55%, rgba(0,0,0,0.4));
+}
+
 /* Section rhythm + shared type */
 .sec { position: relative; width: 100%; padding: clamp(80px, 12vw, 150px) 24px; }
-.sec--band { background: #08090b; }
+.sec--band { background: transparent; }
 .sec--flush-top { padding-top: 0; }
 .wrap { max-width: 1120px; margin: 0 auto; }
 .wrap--narrow { max-width: 760px; margin: 0 auto; }
@@ -407,22 +419,26 @@ tbody tr:hover td { background: rgba(33,208,173,0.05); }
 .lead { color: #a6afb3; font-size: clamp(17px,2vw,22px); line-height: 1.45; letter-spacing: -0.012em; }
 .lead-narrow { max-width: 640px; margin-inline: auto; }
 
-/* Hero — the animated risk graph is the BACKGROUND; the title sits on it. */
+/* Hero — the title floats on the page-wide graph. A soft local scrim keeps
+   the words readable where the graph runs brightest. */
 .hero {
-  position: relative; overflow: hidden;
-  min-height: 94vh; display: flex; flex-direction: column;
+  position: relative;
+  min-height: 92vh; display: flex; flex-direction: column;
   align-items: center; justify-content: center; text-align: center;
   padding: 100px 24px 60px;
 }
-.hero-bg { position: absolute; inset: 0; z-index: 0; }
-.hero-canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; opacity: 0.85; }
-/* Dim the graph where the words are, keep it alive at the edges. */
-.hero-bg::after {
-  content: ""; position: absolute; inset: 0; pointer-events: none;
-  background:
-    radial-gradient(58% 46% at 50% 42%, rgba(0,0,0,0.86), rgba(0,0,0,0.30) 62%, transparent 82%),
-    linear-gradient(180deg, #000 0%, transparent 22%, transparent 62%, #000 100%),
-    linear-gradient(90deg, #000 0%, transparent 16%, transparent 84%, #000 100%);
+.hero::before {
+  content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background: radial-gradient(44% 38% at 50% 47%, rgba(0,0,0,0.55), transparent 78%);
+}
+/* Let text stay legible over the live graph without hiding it. */
+.hero-content .display,
+.hero-content .lead,
+.h-lg, .display, .lead, .spec-num, .plan-price .amt {
+  text-shadow: 0 2px 26px rgba(0,0,0,0.7), 0 1px 3px rgba(0,0,0,0.6);
+}
+.feat p, .plan-blurb, .plan-feat, .lead-narrow, .spec-cap, .fineprint {
+  text-shadow: 0 1px 10px rgba(0,0,0,0.85);
 }
 /* Borderless data labels embedded in the graph — no boxes. */
 .hero-label {
