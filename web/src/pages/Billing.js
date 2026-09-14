@@ -53,7 +53,7 @@ export default function Billing() {
                 {status.plan_name}
                 <span className="status-pill" style={{
                   fontSize: 11, marginLeft: 10, padding: "3px 10px", borderRadius: 999,
-                  background: "rgba(33,208,173,0.12)", color: "var(--teal-2)", verticalAlign: "middle",
+                  background: "rgba(226,199,195,0.12)", color: "var(--teal-2)", verticalAlign: "middle",
                 }}>{status.subscription_status}</span>
               </div>
             </div>
@@ -79,7 +79,7 @@ export default function Billing() {
 
       {msg && (
         <div style={{
-          background: "rgba(33,208,173,0.1)", border: "1px solid rgba(33,208,173,0.3)",
+          background: "rgba(226,199,195,0.1)", border: "1px solid rgba(226,199,195,0.3)",
           borderRadius: 8, padding: "10px 14px", color: "var(--teal-2)", fontSize: 13, marginBottom: 20,
         }}>{msg}</div>
       )}
@@ -89,7 +89,7 @@ export default function Billing() {
           const current = status && status.plan === p.tier;
           return (
             <div key={p.tier} className="card" style={{
-              borderColor: current ? "rgba(33,208,173,0.4)" : "var(--border-soft)",
+              borderColor: current ? "rgba(226,199,195,0.4)" : "var(--border-soft)",
             }}>
               <div style={{ fontFamily: "var(--font)", fontWeight: 600, fontSize: 16 }}>{p.name}</div>
               <div style={{ margin: "10px 0 4px" }}>

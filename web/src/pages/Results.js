@@ -10,10 +10,10 @@ import {
   AlertTriangle, CheckCircle, XCircle, ChevronDown, ChevronUp,
 } from "lucide-react";
 
-const GOLD = "#3DE0BE";   // retired gold -> light teal
-const TEAL = "#148F77";
+const GOLD = "#F2C14E";   // retired gold -> light teal
+const TEAL = "#C69C96";
 const ROSE = "#C0392B";
-const BLUE = "#5A6B72";   // retired blue -> neutral slate
+const BLUE = "#1B3A5C";   // retired blue -> neutral slate
 const MUTED = "#5D7A99";
 
 
@@ -670,7 +670,7 @@ export default function Results() {
       {/* ── Disclaimer ── */}
       <div style={{
         marginTop: 8, padding: "12px 16px",
-        background: "rgba(212,172,13,0.05)", border: "1px solid rgba(212,172,13,0.15)",
+        background: "rgba(242,193,78,0.05)", border: "1px solid rgba(242,193,78,0.15)",
         borderRadius: 8, fontSize: 11, color: MUTED, lineHeight: 1.6,
       }}>
         <strong style={{ color: GOLD }}>⚠ Important:</strong> These results are estimated risk

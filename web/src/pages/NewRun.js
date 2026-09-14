@@ -333,7 +333,7 @@ export default function NewRun() {
                     border: `2px dashed ${dragging ? "var(--gold)" : "var(--border)"}`,
                     borderRadius: 10, padding: "36px 24px", textAlign: "center",
                     cursor: "pointer", transition: "border-color 0.2s",
-                    background: dragging ? "rgba(212,172,13,0.04)" : "transparent",
+                    background: dragging ? "rgba(242,193,78,0.04)" : "transparent",
                   }}
                 >
                   <Upload size={28} color="var(--muted)" style={{ marginBottom: 10 }} />

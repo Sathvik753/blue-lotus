@@ -20,9 +20,9 @@ function navStyle({ isActive }) {
     padding: "12px 14px", borderRadius: 11, marginBottom: 4,
     color: isActive ? "var(--white)" : "var(--muted)",
     background: isActive
-      ? "linear-gradient(100deg, rgba(212,172,13,0.16), rgba(33,208,173,0.06))"
+      ? "linear-gradient(100deg, rgba(242,193,78,0.16), rgba(226,199,195,0.06))"
       : "transparent",
-    boxShadow: isActive ? "inset 0 0 0 1px rgba(212,172,13,0.25)" : "none",
+    boxShadow: isActive ? "inset 0 0 0 1px rgba(242,193,78,0.25)" : "none",
     textDecoration: "none", fontSize: 13.5, fontWeight: 600,
     fontFamily: "var(--font)", letterSpacing: "0.01em",
     transition: "all 0.18s ease",
@@ -105,7 +105,7 @@ export default function Layout() {
               <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3 }}>
                 <span style={{
                   fontSize: 9.5, textTransform: "uppercase", letterSpacing: "0.08em",
-                  color: "var(--gold)", background: "rgba(212,172,13,0.12)",
+                  color: "var(--gold)", background: "rgba(242,193,78,0.12)",
                   padding: "2px 7px", borderRadius: 999, fontWeight: 600,
                 }}>{user.plan}</span>
                 <span style={{ fontSize: 10.5, color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>

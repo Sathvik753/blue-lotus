@@ -103,8 +103,8 @@ export default function HeroCanvas() {
       for (let s = cut; s >= 0; s--) ctx.lineTo(X(s), Y(lo[s]));
       ctx.closePath();
       const band = ctx.createLinearGradient(0, padY, 0, H - padY);
-      band.addColorStop(0, "rgba(33,208,173,0.10)");
-      band.addColorStop(1, "rgba(20,60,58,0.03)");
+      band.addColorStop(0, "rgba(226,199,195,0.10)");
+      band.addColorStop(1, "rgba(27,58,92,0.05)");
       ctx.fillStyle = band;
       ctx.fill();
 
@@ -120,7 +120,7 @@ export default function HeroCanvas() {
           ctx.strokeStyle = "rgba(216,96,76,0.40)";
           ctx.lineWidth = 1.3; ctx.shadowColor = "rgba(216,96,76,0.35)"; ctx.shadowBlur = 5;
         } else {
-          ctx.strokeStyle = `rgba(33,208,173,${0.09 + (i % 5) * 0.028})`;
+          ctx.strokeStyle = `rgba(226,199,195,${0.09 + (i % 5) * 0.028})`;
           ctx.lineWidth = 1; ctx.shadowBlur = 0;
         }
         ctx.stroke();
@@ -133,16 +133,16 @@ export default function HeroCanvas() {
         const y = Y(mid[s]) + shimmer;
         if (s === 0) ctx.moveTo(X(s), y); else ctx.lineTo(X(s), y);
       }
-      ctx.strokeStyle = "rgba(240,246,244,0.92)";
-      ctx.lineWidth = 2; ctx.shadowColor = "rgba(33,208,173,0.55)"; ctx.shadowBlur = 9;
+      ctx.strokeStyle = "rgba(250,250,237,0.92)";
+      ctx.lineWidth = 2; ctx.shadowColor = "rgba(242,193,78,0.5)"; ctx.shadowBlur = 9;
       ctx.stroke();
       ctx.shadowBlur = 0;
 
       if (!reduce && reveal < 1) {
         const hx = X(cut);
         const g = ctx.createLinearGradient(hx - 44, 0, hx, 0);
-        g.addColorStop(0, "rgba(33,208,173,0)");
-        g.addColorStop(1, "rgba(33,208,173,0.5)");
+        g.addColorStop(0, "rgba(242,193,78,0)");
+        g.addColorStop(1, "rgba(242,193,78,0.5)");
         ctx.strokeStyle = g; ctx.lineWidth = 2;
         ctx.beginPath(); ctx.moveTo(hx, padY); ctx.lineTo(hx, H - padY); ctx.stroke();
       }
