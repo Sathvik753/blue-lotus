@@ -21,36 +21,63 @@ PLANS = {
     PlanTier.free: {
         "name": "Free",
         "price_usd": 0,
-        "monthly_runs": 25,
-        "blurb": "Evaluation and light single-asset use.",
-        "features": ["25 stress runs / month", "JSON + PDF export", "Single seat"],
+        "monthly_runs": 5,
+        "blurb": "A temporary look at the engine on a single asset.",
+        "features": ["5 stress runs / month", "JSON + PDF export", "Single seat"],
         "stripe_price_env": None,
+    },
+    PlanTier.plus: {
+        "name": "Plus",
+        "price_usd": 25,
+        "monthly_runs": 25,
+        "blurb": "For the individual trader sizing their own risk.",
+        "features": [
+            "25 stress runs / month",
+            "JSON + PDF export",
+            "Full run history",
+            "Single seat",
+        ],
+        "stripe_price_env": "STRIPE_PRICE_PLUS",
     },
     PlanTier.pro: {
         "name": "Pro",
-        "price_usd": 1000,
-        "monthly_runs": 1500,
-        "blurb": "Desk-grade risk for a small fund or trading team.",
+        "price_usd": 100,
+        "monthly_runs": 100,
+        "blurb": "For serious traders and small desks running risk daily.",
         "features": [
-            "1,500 stress runs / month",
+            "100 stress runs / month",
             "Full API access + API keys",
             "Priority support",
-            "Up to 10 seats",
+            "Up to 3 seats",
         ],
         "stripe_price_env": "STRIPE_PRICE_PRO",
     },
-    PlanTier.enterprise: {
-        "name": "Enterprise",
-        "price_usd": None,   # "Contact us"
+    PlanTier.institutional: {
+        "name": "Institutional",
+        "price_usd": 1000,
+        "monthly_runs": 2000,
+        "blurb": "For funds and prop firms running risk across the book.",
+        "features": [
+            "2,000 stress runs / month",
+            "Full API access + API keys",
+            "SSO / SAML",
+            "Priority support + SLA",
+            "Up to 15 seats",
+        ],
+        "stripe_price_env": "STRIPE_PRICE_INSTITUTIONAL",
+    },
+    PlanTier.custom: {
+        "name": "Custom",
+        "price_usd": None,   # "Let's talk"
         "monthly_runs": None,
-        "blurb": "Unlimited runs, SSO, and a dedicated environment.",
+        "blurb": "Bespoke deployment for larger institutions.",
         "features": [
             "Unlimited runs",
-            "SSO / SAML",
-            "Dedicated deployment + SLA",
+            "Dedicated environment + SLA",
             "Custom scenarios & onboarding",
+            "Unlimited seats",
         ],
-        "stripe_price_env": "STRIPE_PRICE_ENTERPRISE",
+        "stripe_price_env": "STRIPE_PRICE_CUSTOM",
     },
 }
 

@@ -23,7 +23,11 @@ class RunStatus(str, enum.Enum):
 
 class PlanTier(str, enum.Enum):
     free = "free"
+    plus = "plus"
     pro = "pro"
+    institutional = "institutional"
+    custom = "custom"
+    # legacy alias kept so old rows / Stripe metadata still resolve
     enterprise = "enterprise"
 
 class Role(str, enum.Enum):
