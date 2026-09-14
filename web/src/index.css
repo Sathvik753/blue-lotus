@@ -19,6 +19,9 @@
   --teal-2: #21D0AD;
   --gold:   #21D0AD;   /* retired -> teal */
   --gold-2: #3DE0BE;   /* retired -> light teal */
+  /* yellow is the text-link accent (teal stays the primary/brand color) */
+  --yellow:   #F2CB3A;
+  --yellow-2: #F8DC72;
   --rose:   #D8604C;
   --light:  #E9EEF0;
   --muted:  #838E92;
@@ -159,6 +162,7 @@ input::placeholder, textarea::placeholder { color: var(--muted); }
   padding: 11px 22px;
   transition: background 0.2s ease, color 0.2s ease, opacity 0.2s ease, border-color 0.2s ease;
   text-transform: none;
+  text-decoration: none;
   white-space: nowrap;
 }
 .btn-primary {
@@ -175,18 +179,29 @@ input::placeholder, textarea::placeholder { color: var(--muted); }
 .btn-danger:hover:not(:disabled) { background: #e9694f; }
 .btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
-/* Apple text link with a trailing chevron. */
+/* Apple text link with a trailing chevron — yellow so it stands out. */
 .link-chevron {
-  color: var(--teal-2);
+  color: var(--yellow);
   font-weight: 400;
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  transition: opacity 0.2s;
+  transition: color 0.2s;
 }
 .link-chevron::after { content: "\203A"; font-weight: 500; transition: transform 0.2s; }
-.link-chevron:hover { text-decoration: underline; }
+.link-chevron:hover { color: var(--yellow-2); text-decoration: underline; }
 .link-chevron:hover::after { transform: translateX(2px); }
+
+/* Text links are yellow (underlined) against the teal-on-black UI. */
+.bl-nav-links a { text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+.bl-foot a, .link-yellow, a.link-yellow {
+  color: var(--yellow);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+  transition: color 0.2s;
+}
+.bl-foot a:hover, .link-yellow:hover { color: var(--yellow-2); }
 
 /* Labels */
 label {
@@ -379,8 +394,10 @@ tbody tr:hover td { background: rgba(33,208,173,0.05); }
   display: flex; align-items: center; justify-content: space-between;
 }
 .bl-nav-links { display: flex; align-items: center; gap: 22px; }
-.bl-nav-links a { color: var(--light); font-size: 14px; font-weight: 400; transition: color 0.2s; }
-.bl-nav-links a:hover { color: var(--teal-2); }
+.bl-nav-links a { color: var(--yellow); font-size: 14px; font-weight: 400; transition: color 0.2s; }
+.bl-nav-links a:hover { color: var(--yellow-2); }
+/* the CTA pill in the nav is a button, not a text link — keep it teal, no underline */
+.bl-nav-links a.btn { color: #04140F; text-decoration: none; }
 
 /* Section shell */
 .bl-section { max-width: 1160px; margin: 0 auto; padding: 96px 24px; }

@@ -83,7 +83,7 @@ export default function Landing() {
               <Link to="/run" className="btn btn-primary" style={{ padding: "9px 18px" }}>Open app</Link>
             ) : (
               <>
-                <Link to="/login" style={{ color: "var(--light)", fontWeight: 600 }}>Sign in</Link>
+                <Link to="/login">Sign in</Link>
                 <Link to="/register" className="btn btn-primary" style={{ padding: "9px 18px" }}>Get started</Link>
               </>
             )}
