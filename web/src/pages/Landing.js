@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { Check, ArrowRight, ShieldCheck, Activity, GitBranch, FileText } from "lucide-react";
+import { Check, ShieldCheck, Activity, GitBranch, FileText } from "lucide-react";
 import Logo from "../components/Logo";
-import HeroCanvas from "../components/HeroCanvas";
+import Mandala from "../components/Mandala";
 import { api } from "../utils/api";
 import { useAuth } from "../context/Auth";
 
@@ -51,9 +51,9 @@ export default function Landing() {
   useReveal(plans.length);
 
   return (
-    <div className="bl-page fade-in">
-      {/* One continuous interactive graph behind the whole page */}
-      <div className="site-bg" aria-hidden="true"><HeroCanvas /></div>
+    <div className="bl-page">
+      {/* Geometric lotus mandala behind the whole page — rotates on scroll */}
+      <Mandala />
       <div className="site-scrim" aria-hidden="true" />
 
       {/* Nav */}
@@ -79,24 +79,27 @@ export default function Landing() {
         </div>
       </nav>
 
-      {/* Hero — the title floats on the page-wide graph */}
+      {/* Hero — oversized editorial title over the rotating mandala */}
       <header className="hero">
-        <span className="hero-label hero-label--dd">Max drawdown · p95<b>−38.4%</b></span>
-        <span className="hero-label hero-label--tail">Tail loss · CVaR₉₅<b>−6.1%</b></span>
-        <span className="hero-label hero-label--frag">Model fragility<b className="ok">Low · 0.21</b></span>
-        <div className="hero-content">
-          <span className="eyebrow">Welcome to Blue Lotus Labs</span>
-          <h1 className="display">Institutional trading software <span className="gradient-text">made accessible.</span></h1>
-          <p className="lead">
-            Blue Lotus stress-tests your strategies and investments using
-            bleeding-edge financial mathematics.
-          </p>
-          <div className="cta">
-            <Link to="/register" className="btn btn-primary btn-lg">Start free <ArrowRight size={17} /></Link>
-            <a href="#pricing" className="link-chevron" style={{ fontSize: 17 }}>See pricing</a>
+        <div className="hero-inner">
+          <h1 className="hero-title">Blue Lotus</h1>
+          <div className="hero-links">
+            <Link to="/register" className="link-chevron">Start free</Link>
+            <a href="#pricing" className="link-chevron">See pricing</a>
           </div>
-          <div className="fineprint">Free to start · <b>Plus $25/mo</b> · <b>Pro $100/mo</b> · no card required</div>
+          <div className="hero-pills">
+            <span className="pill">Institutional-grade</span>
+            <span className="pill">744 asset-years validated</span>
+            <span className="pill">9 crises stress-tested</span>
+          </div>
+          <p className="hero-sub">
+            Institutional trading software, made accessible — stress-test your
+            strategies and investments with bleeding-edge financial mathematics.
+          </p>
         </div>
+        <a href="#pricing" className="scroll-cue" aria-label="Scroll down">
+          SCROLL<span aria-hidden="true">›</span>
+        </a>
       </header>
 
       {/* Highlights — borderless feature columns over the page-wide graph */}

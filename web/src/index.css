@@ -399,16 +399,32 @@ tbody tr:hover td { background: rgba(226, 199, 195,0.05); }
 .bl-nav-links a:hover { color: var(--yellow-2); }
 .bl-nav-links a.btn { color: #241A03; text-decoration: none; }
 
-/* One continuous interactive graph behind the whole page — no dead black. */
+/* Rotating lotus mandala behind the whole page. */
 .bl-page { position: relative; }
-.bl-page > *:not(.site-bg):not(.site-scrim) { position: relative; z-index: 1; }
-.site-bg { position: fixed; inset: 0; z-index: 0; }
-.site-bg .hero-canvas { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0.9; }
+.bl-page > *:not(.mandala):not(.site-scrim) { position: relative; z-index: 1; }
+.mandala {
+  position: fixed; inset: 0; z-index: 0; display: grid; place-items: center;
+  pointer-events: none; overflow: hidden;
+}
+.mandala::after {  /* warm glowing core, like the reference */
+  content: ""; position: absolute; width: 40vmin; height: 40vmin;
+  border-radius: 50%; background: radial-gradient(circle, rgba(242,193,78,0.16), transparent 70%);
+  filter: blur(6px);
+}
+.mandala-svg {
+  width: min(150vh, 150vw); height: min(150vh, 150vw); overflow: visible;
+  transform: rotate(var(--rot, 0deg)); transition: transform 0.12s linear;
+  will-change: transform;
+}
+.mandala-ring { fill: none; stroke: rgba(242,193,78,0.20); stroke-width: 0.3; }
+.mandala-web { fill: none; stroke: rgba(242,193,78,0.22); stroke-width: 0.22; }
+.mandala-petals { fill: none; stroke: rgba(242,193,78,0.55); stroke-width: 0.4; }
+.mandala-petals--soft { stroke: rgba(226,199,195,0.30); stroke-width: 0.3; }
 .site-scrim {
   position: fixed; inset: 0; z-index: 0; pointer-events: none;
   background:
-    linear-gradient(180deg, rgba(0,0,0,0.45), rgba(0,0,0,0.20) 22%, rgba(0,0,0,0.20) 78%, rgba(0,0,0,0.48)),
-    radial-gradient(140% 90% at 50% 40%, transparent 55%, rgba(0,0,0,0.4));
+    radial-gradient(120% 90% at 50% 45%, transparent 40%, rgba(11,21,40,0.55) 88%),
+    linear-gradient(180deg, rgba(11,21,40,0.35), transparent 30%, transparent 82%, rgba(11,21,40,0.55));
 }
 
 /* Section rhythm + shared type */
@@ -424,48 +440,44 @@ tbody tr:hover td { background: rgba(226, 199, 195,0.05); }
 .lead { color: #a6afb3; font-size: clamp(17px,2vw,22px); line-height: 1.45; letter-spacing: -0.012em; }
 .lead-narrow { max-width: 640px; margin-inline: auto; }
 
-/* Hero — the title floats on the page-wide graph. A soft local scrim keeps
-   the words readable where the graph runs brightest. */
+/* Keep text legible over the mandala without hiding it. */
+.hero-title, .h-lg, .display, .lead, .spec-num, .plan-price .amt {
+  text-shadow: 0 2px 30px rgba(11,21,40,0.75), 0 1px 3px rgba(11,21,40,0.6);
+}
+.feat p, .plan-blurb, .plan-feat, .lead-narrow, .spec-cap, .hero-sub {
+  text-shadow: 0 1px 12px rgba(11,21,40,0.85);
+}
+
+/* Hero — an oversized editorial title over the rotating mandala. */
 .hero {
   position: relative;
-  min-height: 92vh; display: flex; flex-direction: column;
+  min-height: 100vh; display: flex; flex-direction: column;
   align-items: center; justify-content: center; text-align: center;
-  padding: 100px 24px 60px;
+  padding: 96px 24px 80px;
 }
-.hero::before {
-  content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none;
-  background: radial-gradient(44% 38% at 50% 47%, rgba(0,0,0,0.55), transparent 78%);
+.hero-inner { position: relative; z-index: 2; width: 100%; max-width: 1160px; }
+.hero-title {
+  font-size: clamp(64px, 15vw, 210px); line-height: 0.9; letter-spacing: -0.045em;
+  font-weight: 600; color: var(--white); margin-bottom: 6px;
 }
-/* Let text stay legible over the live graph without hiding it. */
-.hero-content .display,
-.hero-content .lead,
-.h-lg, .display, .lead, .spec-num, .plan-price .amt {
-  text-shadow: 0 2px 26px rgba(0,0,0,0.7), 0 1px 3px rgba(0,0,0,0.6);
+.hero-links { display: flex; gap: 30px; justify-content: center; margin: 18px 0 22px; }
+.hero-links .link-chevron { font-size: clamp(15px, 1.8vw, 18px); }
+.hero-pills { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 22px; }
+.pill {
+  font-size: 13px; color: var(--light); letter-spacing: -0.01em;
+  border: 1px solid var(--border-soft); border-radius: 999px; padding: 7px 16px;
+  background: rgba(226,199,195,0.05); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
 }
-.feat p, .plan-blurb, .plan-feat, .lead-narrow, .spec-cap, .fineprint {
-  text-shadow: 0 1px 10px rgba(0,0,0,0.85);
-}
-/* Borderless data labels embedded in the graph — no boxes. */
-.hero-label {
-  position: absolute; z-index: 1; font-family: ui-monospace, "SF Mono", Menlo, monospace;
-  font-size: 11px; letter-spacing: 0.04em; color: #8a9296; white-space: nowrap;
-  animation: chipFloat 8s ease-in-out infinite;
-}
-.hero-label b { font-weight: 600; color: var(--rose); font-family: var(--font); font-size: 15px; margin-left: 6px; }
-.hero-label b.ok { color: var(--teal-2); }
-.hero-label--dd   { top: 15%; left: 8%; }
-.hero-label--tail { bottom: 17%; left: 13%; animation-delay: -2.6s; }
-.hero-label--frag { top: 20%; right: 9%; animation-delay: -5s; }
-@keyframes chipFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
-@media (max-width: 760px) { .hero-label { display: none; } }
+.hero-sub { color: #cbc5b7; font-size: clamp(15px, 1.9vw, 18px); line-height: 1.5; max-width: 600px; margin: 0 auto; }
 
-.hero-content { position: relative; z-index: 2; max-width: 860px; }
-.hero-content .display { max-width: 15ch; margin: 12px auto 22px; }
-.hero-content .lead { max-width: 620px; margin: 0 auto 28px; }
-.cta { display: flex; gap: 24px; justify-content: center; align-items: center; flex-wrap: wrap; }
-.btn-lg { font-size: 17px; padding: 13px 28px; display: inline-flex; align-items: center; gap: 8px; }
-.fineprint { color: #99a1a5; font-size: 14px; margin-top: 18px; letter-spacing: -0.01em; }
-.fineprint b { color: #cfd6d9; font-weight: 600; }
+.scroll-cue {
+  position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); z-index: 2;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  color: var(--muted); font-size: 11px; letter-spacing: 0.22em; text-decoration: none;
+}
+.scroll-cue span { color: var(--amber); font-size: 16px; transform: rotate(90deg); animation: nudge 1.8s ease-in-out infinite; }
+.scroll-cue:hover { color: var(--light); }
+@keyframes nudge { 0%,100% { transform: rotate(90deg) translateX(0); } 50% { transform: rotate(90deg) translateX(4px); } }
 
 /* Highlights — features embedded in an interactive graph background, no boxes.
    Columns are divided by hairlines only. */
