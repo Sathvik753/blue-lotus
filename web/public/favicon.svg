@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 200 200">
+  <defs>
+    <linearGradient id="bk" x1="100" y1="150" x2="100" y2="55" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0F2740"/><stop offset="1" stop-color="#1B3A5C"/>
+    </linearGradient>
+    <linearGradient id="md" x1="100" y1="150" x2="100" y2="50" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#B78F89"/><stop offset="1" stop-color="#E2C7C3"/>
+    </linearGradient>
+    <linearGradient id="ft" x1="100" y1="150" x2="100" y2="50" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#E2C7C3"/><stop offset="0.55" stop-color="#EFCF8E"/><stop offset="1" stop-color="#F2C14E"/>
+    </linearGradient>
+  </defs>
+  <rect width="200" height="200" rx="44" fill="#0B1528"/>
+  <g transform="translate(0 -14)">
+    <path d="M100 150 C70 126.32 85 89.32 100 76 C115 89.32 130 126.32 100 150 Z" transform="rotate(-78 100 150)" fill="url(#bk)" opacity="0.92"/>
+    <path d="M100 150 C70 126.32 85 89.32 100 76 C115 89.32 130 126.32 100 150 Z" transform="rotate(78 100 150)" fill="url(#bk)" opacity="0.92"/>
+    <path d="M100 150 C70 123.76 85 82.76 100 68 C115 82.76 130 123.76 100 150 Z" transform="rotate(-52 100 150)" fill="url(#bk)" opacity="0.92"/>
+    <path d="M100 150 C70 123.76 85 82.76 100 68 C115 82.76 130 123.76 100 150 Z" transform="rotate(52 100 150)" fill="url(#bk)" opacity="0.92"/>
+    <path d="M100 150 C73 121.2 86.5 76.2 100 60 C113.5 76.2 127 121.2 100 150 Z" transform="rotate(-27 100 150)" fill="url(#md)"/>
+    <path d="M100 150 C73 121.2 86.5 76.2 100 60 C113.5 76.2 127 121.2 100 150 Z" transform="rotate(27 100 150)" fill="url(#md)"/>
+    <path d="M100 150 C73 118 86.5 68 100 50 C113.5 68 127 118 100 150 Z" fill="url(#ft)" stroke="rgba(255,255,255,0.5)" stroke-width="1.2"/>
+    <circle cx="100" cy="138" r="7" fill="#F7D177" opacity="0.9"/>
+    <circle cx="100" cy="138" r="3" fill="#FBEFCF"/>
+  </g>
+</svg>
