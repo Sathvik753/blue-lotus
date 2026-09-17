@@ -18,69 +18,65 @@ from db.models import Organization, Run, PlanTier, SubscriptionStatus
 # --- Plan catalogue -------------------------------------------------------------
 # monthly_runs = metered quota; None = unlimited. price_usd is display only.
 PLANS = {
-    # NOTE: features listed here must be things the product actually does today
-    # (metered run quotas, JSON/PDF export, full run history, REST API + API
-    # keys). Do not list SSO, support/SLA, or multi-seat until they are built.
+    # NOTE: features listed here must be things the product actually does today.
+    # API access (REST + keys) is gated to Algo Pro and Institutional only —
+    # see API_TIERS / plan_allows_api below, enforced in api/auth.py.
     PlanTier.free: {
-        "name": "Free",
+        "name": "Sandbox",
         "price_usd": 0,
-        "monthly_runs": 5,
-        "blurb": "A first look at the engine.",
-        "features": ["5 stress runs / month", "JSON + PDF export", "Full run history"],
+        "monthly_runs": 3,
+        "blurb": "Try the engine live.",
+        "features": ["3 stress runs / month", "JSON + PDF export", "Full run history"],
         "stripe_price_env": None,
     },
     PlanTier.plus: {
-        "name": "Plus",
-        "price_usd": 25,
-        "monthly_runs": 25,
-        "blurb": "For the individual trader sizing their own risk.",
+        "name": "Trader Plus",
+        "price_usd": 49,
+        "monthly_runs": 250,
+        "blurb": "Account blow-up protection for the active retail trader.",
         "features": [
-            "25 stress runs / month",
+            "250 stress runs / month",
+            "CSV upload + paste returns",
             "JSON + PDF export",
             "Full run history",
         ],
         "stripe_price_env": "STRIPE_PRICE_PLUS",
     },
     PlanTier.pro: {
-        "name": "Pro",
-        "price_usd": 100,
-        "monthly_runs": 100,
-        "blurb": "For serious traders and small desks running risk daily.",
+        "name": "Algo Pro",
+        "price_usd": 149,
+        "monthly_runs": 1500,
+        "blurb": "For systematic traders and bot builders who automate it.",
         "features": [
-            "100 stress runs / month",
-            "Full API access + API keys",
-            "JSON + PDF export",
+            "1,500 stress runs / month",
+            "Full REST API + API keys",
+            "Everything in Trader Plus",
             "Full run history",
         ],
         "stripe_price_env": "STRIPE_PRICE_PRO",
     },
     PlanTier.institutional: {
         "name": "Institutional",
-        "price_usd": 1000,
-        "monthly_runs": 2000,
-        "blurb": "For funds and prop firms running risk across the book.",
+        "price_usd": None,   # "Contact us"
+        "monthly_runs": None,
+        "blurb": "For prop desks and boutique funds — let's talk.",
         "features": [
-            "2,000 stress runs / month",
-            "Full API access + API keys",
-            "JSON + PDF export",
-            "Full run history",
+            "Unlimited runs",
+            "Full REST API + API keys",
+            "Custom volume pricing",
+            "Dedicated onboarding",
         ],
         "stripe_price_env": "STRIPE_PRICE_INSTITUTIONAL",
     },
-    PlanTier.custom: {
-        "name": "Custom",
-        "price_usd": None,   # "Let's talk"
-        "monthly_runs": None,
-        "blurb": "For larger volumes — let's talk.",
-        "features": [
-            "Unlimited runs",
-            "Full API access + API keys",
-            "JSON + PDF export",
-            "Custom pricing",
-        ],
-        "stripe_price_env": "STRIPE_PRICE_CUSTOM",
-    },
 }
+
+# API access (REST + keys) is a paid upsell: only these tiers may use API keys.
+API_TIERS = {PlanTier.pro, PlanTier.institutional}
+
+
+def plan_allows_api(org: "Organization") -> bool:
+    """True if the org's plan includes programmatic API access."""
+    return org is not None and org.plan in API_TIERS
 
 STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY", "")
 STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")

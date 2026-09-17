@@ -168,10 +168,10 @@ export default function Landing() {
           </div>
           <div className="plans">
             {plans.map((p, i) => {
-              const pop = p.tier === "pro";
+              const pop = p.tier === "plus";
               const { amt, per } = priceLabel(p);
               const label = p.tier === "free" ? "Start free"
-                : p.tier === "custom" ? "Get started" : `Choose ${p.name}`;
+                : p.tier === "institutional" ? "Contact us" : `Choose ${p.name}`;
               return (
                 <div key={p.tier} className={`plan reveal ${pop ? "plan--pop" : ""}`} style={{ transitionDelay: `${i * 60}ms` }}>
                   {pop && <div className="plan-tag">Most popular</div>}

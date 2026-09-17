@@ -227,6 +227,13 @@ async def create_api_key(
     org: Organization = Depends(get_current_org),
     db: AsyncSession = Depends(get_db),
 ):
+    from api.auth import is_developer
+    if not is_developer(user) and not billing.plan_allows_api(org):
+        raise HTTPException(
+            status_code=403,
+            detail="API keys are available on the Algo Pro plan and higher. "
+                   "Upgrade to generate an API key.",
+        )
     raw, hashed, prefix = generate_api_key()
     key_obj = ApiKey(user_id=user.id, org_id=org.id, key_hash=hashed, prefix=prefix, name=name)
     db.add(key_obj)

@@ -139,6 +139,20 @@ async def get_current_user(
             result = await db.execute(select(User).where(User.id == key_obj.user_id))
             user = result.scalar_one_or_none()
             if user:
+                # API access is a paid tier: the key only authenticates for orgs
+                # on Algo Pro or higher (developers are exempt).
+                if not is_developer(user):
+                    from api import billing
+                    org_res = await db.execute(
+                        select(Organization).where(Organization.id == user.org_id)
+                    )
+                    org = org_res.scalar_one_or_none()
+                    if not billing.plan_allows_api(org):
+                        raise HTTPException(
+                            status_code=403,
+                            detail="API access requires the Algo Pro plan or higher. "
+                                   "Upgrade your plan to use API keys.",
+                        )
                 key_obj.last_used = datetime.now(timezone.utc)
                 await db.commit()
 

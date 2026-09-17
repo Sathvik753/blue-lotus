@@ -531,8 +531,8 @@ tbody tr:hover td { background: rgba(226, 199, 195,0.05); }
 
 /* Pricing — columns divided by hairlines, no boxes */
 .plans {
-  display: grid; grid-template-columns: repeat(5, 1fr);
-  max-width: 1180px; margin: clamp(40px,6vw,64px) auto 0;
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  max-width: 1040px; margin: clamp(40px,6vw,64px) auto 0;
   border-top: 1px solid rgba(255,255,255,0.12);
 }
 .plan {
