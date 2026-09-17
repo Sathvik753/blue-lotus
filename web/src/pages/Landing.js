@@ -61,7 +61,7 @@ export default function Landing() {
         <div className="bl-nav-inner">
           <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
             <Logo size={34} />
-            <span className="gradient-text" style={{ fontWeight: 600, fontSize: 19, letterSpacing: "-0.02em" }}>Blue Lotus</span>
+            <span className="gradient-text" style={{ fontWeight: 600, fontSize: 19, letterSpacing: "-0.02em" }}>Blue Lotus Labs</span>
           </div>
           <div className="bl-nav-links">
             <a href="#pricing">Pricing</a>

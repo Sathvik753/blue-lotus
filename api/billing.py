@@ -18,12 +18,15 @@ from db.models import Organization, Run, PlanTier, SubscriptionStatus
 # --- Plan catalogue -------------------------------------------------------------
 # monthly_runs = metered quota; None = unlimited. price_usd is display only.
 PLANS = {
+    # NOTE: features listed here must be things the product actually does today
+    # (metered run quotas, JSON/PDF export, full run history, REST API + API
+    # keys). Do not list SSO, support/SLA, or multi-seat until they are built.
     PlanTier.free: {
         "name": "Free",
         "price_usd": 0,
         "monthly_runs": 5,
-        "blurb": "A temporary look at the engine on a single asset.",
-        "features": ["5 stress runs / month", "JSON + PDF export", "Single seat"],
+        "blurb": "A first look at the engine.",
+        "features": ["5 stress runs / month", "JSON + PDF export", "Full run history"],
         "stripe_price_env": None,
     },
     PlanTier.plus: {
@@ -35,7 +38,6 @@ PLANS = {
             "25 stress runs / month",
             "JSON + PDF export",
             "Full run history",
-            "Single seat",
         ],
         "stripe_price_env": "STRIPE_PRICE_PLUS",
     },
@@ -47,8 +49,8 @@ PLANS = {
         "features": [
             "100 stress runs / month",
             "Full API access + API keys",
-            "Priority support",
-            "Up to 3 seats",
+            "JSON + PDF export",
+            "Full run history",
         ],
         "stripe_price_env": "STRIPE_PRICE_PRO",
     },
@@ -60,9 +62,8 @@ PLANS = {
         "features": [
             "2,000 stress runs / month",
             "Full API access + API keys",
-            "SSO / SAML",
-            "Priority support + SLA",
-            "Up to 15 seats",
+            "JSON + PDF export",
+            "Full run history",
         ],
         "stripe_price_env": "STRIPE_PRICE_INSTITUTIONAL",
     },
@@ -70,12 +71,12 @@ PLANS = {
         "name": "Custom",
         "price_usd": None,   # "Let's talk"
         "monthly_runs": None,
-        "blurb": "Bespoke deployment for larger institutions.",
+        "blurb": "For larger volumes — let's talk.",
         "features": [
             "Unlimited runs",
-            "Dedicated environment + SLA",
-            "Custom scenarios & onboarding",
-            "Unlimited seats",
+            "Full API access + API keys",
+            "JSON + PDF export",
+            "Custom pricing",
         ],
         "stripe_price_env": "STRIPE_PRICE_CUSTOM",
     },
