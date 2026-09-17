@@ -32,10 +32,10 @@ PLANS = {
     PlanTier.plus: {
         "name": "Trader Plus",
         "price_usd": 49,
-        "monthly_runs": 250,
+        "monthly_runs": 150,
         "blurb": "Account blow-up protection for the active retail trader.",
         "features": [
-            "250 stress runs / month",
+            "150 stress runs / month",
             "CSV upload + paste returns",
             "JSON + PDF export",
             "Full run history",
@@ -45,10 +45,10 @@ PLANS = {
     PlanTier.pro: {
         "name": "Algo Pro",
         "price_usd": 149,
-        "monthly_runs": 1500,
+        "monthly_runs": 500,
         "blurb": "For systematic traders and bot builders who automate it.",
         "features": [
-            "1,500 stress runs / month",
+            "500 stress runs / month",
             "Full REST API + API keys",
             "Everything in Trader Plus",
             "Full run history",
