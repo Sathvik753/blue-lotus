@@ -1,6 +1,6 @@
 import React from "react";
 import { Outlet, NavLink, Link, useNavigate } from "react-router-dom";
-import { Clock, BarChart2, Zap, CreditCard, Terminal, LogOut } from "lucide-react";
+import { Clock, BarChart2, Zap, CreditCard, Terminal, LogOut, KeyRound } from "lucide-react";
 import Logo from "./Logo";
 import { useAuth } from "../context/Auth";
 
@@ -8,6 +8,7 @@ const NAV = [
   { to: "/run", icon: Zap, label: "New Run" },
   { to: "/history", icon: Clock, label: "History" },
   { to: "/compare", icon: BarChart2, label: "Compare" },
+  { to: "/api", icon: KeyRound, label: "API" },
   { to: "/billing", icon: CreditCard, label: "Billing" },
 ];
 

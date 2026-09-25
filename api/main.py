@@ -256,6 +256,25 @@ async def list_api_keys(
              "last_used": k.last_used, "created_at": k.created_at} for k in keys]
 
 
+@app.delete("/auth/api-keys/{key_id}", tags=["Auth"])
+async def revoke_api_key(
+    key_id: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Deactivate one of the caller's API keys (soft-delete, immediate)."""
+    result = await db.execute(
+        select(ApiKey).where(ApiKey.id == key_id, ApiKey.user_id == user.id)
+    )
+    key_obj = result.scalar_one_or_none()
+    if not key_obj:
+        raise HTTPException(status_code=404, detail="API key not found.")
+    key_obj.is_active = False
+    await db.commit()
+    await log_action(db, "apikey.revoke", user=user)
+    return {"revoked": True, "key_id": key_id}
+
+
 # =============================================================== Billing
 @app.get("/billing/plans", response_model=list[PlanInfo], tags=["Billing"])
 async def list_plans():

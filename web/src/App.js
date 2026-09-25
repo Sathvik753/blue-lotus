@@ -15,6 +15,7 @@ import Results from "./pages/Results";
 import History from "./pages/History";
 import Compare from "./pages/Compare";
 import Billing from "./pages/Billing";
+import ApiKeys from "./pages/ApiKeys";
 import Developer from "./pages/Developer";
 
 export default function App() {
@@ -39,6 +40,7 @@ export default function App() {
             <Route path="/history" element={<History />} />
             <Route path="/compare" element={<Compare />} />
             <Route path="/billing" element={<Billing />} />
+            <Route path="/api" element={<ApiKeys />} />
             <Route path="/developer" element={<DeveloperRoute><Developer /></DeveloperRoute>} />
           </Route>
 
