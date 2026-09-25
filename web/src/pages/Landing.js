@@ -5,6 +5,7 @@ import Logo from "../components/Logo";
 import Mandala from "../components/Mandala";
 import { api } from "../utils/api";
 import { useAuth } from "../context/Auth";
+import { PAYMENTS_ENABLED } from "../config";
 
 const TILES = [
   { icon: Activity, v: "a", title: "Regime-aware Monte Carlo", body: "Volatility regimes, EVT tails, and bootstrap intervals on every metric — not a single-distribution toy." },
@@ -44,6 +45,7 @@ function priceLabel(p) {
 export default function Landing() {
   const { user } = useAuth();
   const [plans, setPlans] = useState([]);
+  const [payNotice, setPayNotice] = useState(false);
 
   useEffect(() => {
     api.get("/billing/plans").then((r) => { if (r.ok && Array.isArray(r.data)) setPlans(r.data); });
@@ -170,6 +172,8 @@ export default function Landing() {
             {plans.map((p, i) => {
               const pop = p.tier === "plus";
               const { amt, per } = priceLabel(p);
+              const isPaid = p.tier === "plus" || p.tier === "pro";
+              const disabled = isPaid && !PAYMENTS_ENABLED;
               const label = p.tier === "free" ? "Start free"
                 : p.tier === "institutional" ? "Contact us" : `Choose ${p.name}`;
               return (
@@ -189,13 +193,21 @@ export default function Landing() {
                       </div>
                     ))}
                   </div>
-                  {pop
-                    ? <Link to="/register" className="btn btn-primary plan-cta">{label}</Link>
-                    : <Link to="/register" className="link-chevron plan-cta">{label}</Link>}
+                  {disabled
+                    ? <button type="button" className="btn btn-secondary plan-cta" style={{ opacity: 0.8 }} onClick={() => setPayNotice(true)}>Temporarily unavailable</button>
+                    : pop
+                      ? <Link to="/register" className="btn btn-primary plan-cta">{label}</Link>
+                      : <Link to="/register" className="link-chevron plan-cta">{label}</Link>}
                 </div>
               );
             })}
           </div>
+          {payNotice && !PAYMENTS_ENABLED && (
+            <p style={{ marginTop: 22, color: "var(--muted)", fontSize: 14, maxWidth: 620, marginInline: "auto" }}>
+              Paid plans are temporarily disabled while we finalize payment processing.
+              The <b style={{ color: "var(--light)" }}>Sandbox</b> plan is fully available to explore right now.
+            </p>
+          )}
         </div>
       </section>
 

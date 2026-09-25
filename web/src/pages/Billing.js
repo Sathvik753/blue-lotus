@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { api } from "../utils/api";
 import { useAuth } from "../context/Auth";
 import { Check } from "lucide-react";
+import { PAYMENTS_ENABLED } from "../config";
 
 export default function Billing() {
   const { refresh } = useAuth();
@@ -110,10 +111,12 @@ export default function Billing() {
                 <button className="btn btn-secondary" disabled style={{ width: "100%", opacity: 0.6 }}>Current plan</button>
               ) : p.tier === "free" ? (
                 <button className="btn btn-secondary" disabled style={{ width: "100%", opacity: 0.5 }}>—</button>
+              ) : !PAYMENTS_ENABLED ? (
+                <button className="btn btn-secondary" disabled style={{ width: "100%", opacity: 0.6 }}>Temporarily disabled</button>
               ) : (
                 <button className="btn btn-primary" style={{ width: "100%" }}
                   disabled={busy === p.tier} onClick={() => choose(p.tier)}>
-                  {busy === p.tier ? "Working…" : p.tier === "enterprise" ? "Upgrade" : "Upgrade to Pro"}
+                  {busy === p.tier ? "Working…" : `Upgrade to ${p.name}`}
                 </button>
               )}
             </div>
