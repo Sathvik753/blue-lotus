@@ -10,8 +10,8 @@ import { PAYMENTS_ENABLED } from "../config";
 const TILES = [
   { icon: Activity, v: "a", title: "Regime-aware Monte Carlo", body: "Volatility regimes, EVT tails, and bootstrap intervals on every metric — not a single-distribution toy." },
   { icon: ShieldCheck, v: "b", title: "Honest about its limits", body: "Out-of-sample validated on 9 crises and 213 calm windows. It reports the tail gap instead of hiding it." },
-  { icon: GitBranch, v: "c", title: "API-first", body: "Reproducible from a seed and reachable over a clean REST API with per-org keys." },
-  { icon: FileText, v: "a", title: "Every run, a full report", body: "Drawdown, tail-loss, recovery, and a model-fragility score — exportable as JSON or PDF." },
+  { icon: GitBranch, v: "c", title: "API-first", body: "Reproducible from a seed and reachable over a REST API with per-org keys." },
+  { icon: FileText, v: "a", title: "Every run, a report", body: "Drawdown, tail-loss, recovery, and a model-fragility score — exportable as JSON or PDF." },
 ];
 
 const STATS = [
@@ -90,13 +90,12 @@ export default function Landing() {
             <a href="#pricing" className="link-chevron">See pricing</a>
           </div>
           <div className="hero-pills">
-            <span className="pill">Institutional-grade</span>
             <span className="pill">744 asset-years validated</span>
             <span className="pill">9 crises stress-tested</span>
           </div>
           <p className="hero-sub">
             Institutional trading software, made accessible — stress-test your
-            strategies and investments with bleeding-edge financial mathematics.
+            strategies and investments with financial mathematics.
           </p>
         </div>
         <a href="#pricing" className="scroll-cue" aria-label="Scroll down">

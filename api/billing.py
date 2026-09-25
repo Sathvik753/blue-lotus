@@ -33,7 +33,7 @@ PLANS = {
         "name": "Trader Plus",
         "price_usd": 49,
         "monthly_runs": 150,
-        "blurb": "Account blow-up protection for the active retail trader.",
+        "blurb": "Account blow-up protection for the retail trader.",
         "features": [
             "150 stress runs / month",
             "CSV upload + paste returns",
