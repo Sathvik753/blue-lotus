@@ -24,9 +24,9 @@ PLANS = {
     PlanTier.free: {
         "name": "Sandbox",
         "price_usd": 0,
-        "monthly_runs": 10,
+        "monthly_runs": 5,
         "blurb": "Try the engine live.",
-        "features": ["10 stress runs / month", "JSON + PDF export", "Full run history"],
+        "features": ["5 stress runs / month", "JSON + PDF export", "Full run history"],
         "stripe_price_env": None,
     },
     PlanTier.plus: {
