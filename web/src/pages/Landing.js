@@ -8,16 +8,16 @@ import { useAuth } from "../context/Auth";
 import { PAYMENTS_ENABLED } from "../config";
 
 const TILES = [
-  { icon: Activity, v: "a", title: "Regime-aware Monte Carlo", body: "Volatility regimes, EVT tails, and bootstrap intervals on every metric — not a single-distribution toy." },
+  { icon: Activity, v: "a", title: "Regime-aware Monte Carlo", body: "Volatility regimes, EVT tails, and bootstrap intervals on every metric. Not a single-distribution toy." },
   { icon: ShieldCheck, v: "b", title: "Honest about its limits", body: "Out-of-sample validated on 9 crises and 213 calm windows. It reports the tail gap instead of hiding it." },
   { icon: GitBranch, v: "c", title: "API-first", body: "Reproducible from a seed and reachable over a REST API with per-org keys." },
-  { icon: FileText, v: "a", title: "Every run, a report", body: "Drawdown, tail-loss, recovery, and a model-fragility score — exportable as JSON or PDF." },
+  { icon: FileText, v: "a", title: "Every run, a report", body: "Drawdown, tail-loss, recovery, and a model-fragility score, all exportable as JSON or PDF." },
 ];
 
 const STATS = [
   { num: "744", cap: "asset-years of walk-forward, out-of-sample validation" },
   { num: <>9<span className="u"> crises</span></>, cap: "of market history the engine was stress-tested against" },
-  { num: <>4.0<span className="u">%</span></>, cap: "calm-market p5 breach rate — statistically calibrated" },
+  { num: <>4.0<span className="u">%</span></>, cap: "calm-market p5 breach rate, statistically calibrated" },
 ];
 
 function useReveal(dep) {
@@ -94,7 +94,7 @@ export default function Landing() {
             <span className="pill">9 crises stress-tested</span>
           </div>
           <p className="hero-sub">
-            Institutional trading software, made accessible — stress-test your
+            Institutional trading software, made accessible. Stress-test your
             strategies and investments with financial mathematics.
           </p>
         </div>
@@ -123,11 +123,11 @@ export default function Landing() {
       {/* Deep feature + specs */}
       <section className="sec feature">
         <div className="wrap reveal">
-          <span className="eyebrow">The math, in the open</span>
+          <span className="eyebrow">The math in the open</span>
           <h2 className="display">Every run tells you how much to trust it.</h2>
           <p className="lead lead-narrow">
             Most tools hand you one number and a false sense of certainty. Blue Lotus
-            gives you a distribution, confidence intervals, and a fragility score — so
+            gives you a distribution, confidence intervals, and a fragility score, so
             you know when the model is on solid ground and when it isn't.
           </p>
           <div className="specs">
@@ -145,9 +145,9 @@ export default function Landing() {
       <section id="research" className="sec sec--band center">
         <div className="wrap--narrow reveal">
           <span className="eyebrow">Research</span>
-          <h2 className="h-lg">The engine, in full detail.</h2>
+          <h2 className="h-lg">The engine in full detail.</h2>
           <p className="lead lead-narrow" style={{ marginTop: 16 }}>
-            Read the methodology and the out-of-sample evidence behind Blue Lotus —
+            Read the methodology and the out-of-sample evidence behind Blue Lotus:
             regime modeling, Extreme Value tails, and a walk-forward validation across
             744 asset-years that benchmarks the engine against naive baselines.
           </p>
@@ -165,7 +165,7 @@ export default function Landing() {
         <div className="wrap">
           <div className="reveal">
             <h2 className="h-lg">Pricing that scales with the desk.</h2>
-            <p className="lead lead-narrow" style={{ marginTop: 14 }}>Start free. Move up when the book depends on it.</p>
+            <p className="lead lead-narrow" style={{ marginTop: 14 }}>Start free, move up as you succeed.</p>
           </div>
           <div className="plans">
             {plans.map((p, i) => {
@@ -214,6 +214,7 @@ export default function Landing() {
       <footer className="bl-foot">
         <span>© {new Date().getFullYear()} Blue Lotus Labs · Risk analytics, not investment advice.</span>
         <span className="bl-foot-links">
+          <a href="mailto:sathviksurapaneni0@gmail.com?subject=Blue%20Lotus%20Labs%20inquiry">Contact</a>
           <Link to="/terms">Terms</Link>
           <Link to="/privacy">Privacy</Link>
           <Link to="/disclaimer">Disclaimer</Link>

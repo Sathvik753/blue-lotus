@@ -33,6 +33,15 @@ export default function Billing() {
     await refresh();
   }
 
+  async function manageSubscription() {
+    setBusy("portal"); setMsg("");
+    const res = await api.post("/billing/portal", {});
+    setBusy("");
+    if (!res.ok) { setMsg(res.data?.detail || "Could not open the billing portal."); return; }
+    if (res.data.portal_url) { window.location.href = res.data.portal_url; return; }
+    setMsg("Billing portal unavailable.");
+  }
+
   const pct = status && status.runs_limit
     ? Math.min(100, Math.round((status.runs_used / status.runs_limit) * 100))
     : 0;
@@ -75,6 +84,18 @@ export default function Billing() {
               transition: "width 0.4s",
             }} />
           </div>
+
+          {status.plan !== "free" && (
+            <div style={{ marginTop: 18, display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+              <button className="btn btn-secondary" style={{ opacity: busy === "portal" ? 0.6 : 1 }}
+                disabled={busy === "portal"} onClick={manageSubscription}>
+                {busy === "portal" ? "Opening…" : "Manage subscription"}
+              </button>
+              <span style={{ fontSize: 12, color: "var(--muted)" }}>
+                Update your card, change plan, or cancel anytime.
+              </span>
+            </div>
+          )}
         </div>
       )}
 
@@ -111,6 +132,14 @@ export default function Billing() {
                 <button className="btn btn-secondary" disabled style={{ width: "100%", opacity: 0.6 }}>Current plan</button>
               ) : p.tier === "free" ? (
                 <button className="btn btn-secondary" disabled style={{ width: "100%", opacity: 0.5 }}>—</button>
+              ) : p.price_usd == null ? (
+                // Institutional is custom-priced — no Stripe checkout. Route to
+                // a contact email instead. (Swap this address for a dedicated
+                // sales inbox once one exists.)
+                <a className="btn btn-primary" style={{ width: "100%", textAlign: "center", textDecoration: "none" }}
+                  href="mailto:sathviksurapaneni0@gmail.com?subject=Blue%20Lotus%20Labs%20%E2%80%94%20Institutional%20inquiry">
+                  Contact us
+                </a>
               ) : !PAYMENTS_ENABLED ? (
                 <button className="btn btn-secondary" disabled style={{ width: "100%", opacity: 0.6 }}>Temporarily disabled</button>
               ) : (

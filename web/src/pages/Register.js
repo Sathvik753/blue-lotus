@@ -24,7 +24,9 @@ export default function Register() {
         name: form.name.trim() || undefined,
         org_name: form.org_name.trim() || undefined,
       });
-      navigate("/run", { replace: true });
+      // Land new users on Billing so they can see plans and pick/upgrade
+      // (including Institutional "Contact us") before running anything.
+      navigate("/billing", { replace: true });
     } catch (err) {
       setError(err.message || "Registration failed.");
       setBusy(false);
