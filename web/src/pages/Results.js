@@ -28,13 +28,15 @@ const scaleHist = (data) =>
 
 const scaleRef = (r) => ({ ...r, value: r.value != null ? r.value * 100 : r.value });
 
-// Bootstrap CI formatted as "90% CI: [X, Y]"
-function CiBadge({ lo, hi, isDay = false }) {
+// Bootstrap CI formatted as "<label>: [X, Y]". The label defaults to a generic
+// "90% CI" but callers pass "90% CI of mean" etc. so a reader never mistakes the
+// precision of an estimate for the spread of outcomes.
+function CiBadge({ lo, hi, isDay = false, label = "90% CI" }) {
   if (lo == null || hi == null || isNaN(lo) || isNaN(hi)) return null;
   const fmt = isDay ? v => `${v.toFixed(0)}d` : v => pct(v);
   return (
     <div style={{ fontSize: 10, color: MUTED, marginTop: 5, fontFamily: "ui-monospace, SF Mono, Menlo, monospace" }}>
-      90% CI: [{fmt(lo)}, {fmt(hi)}]
+      {label}: [{fmt(lo)}, {fmt(hi)}]
     </div>
   );
 }
@@ -110,12 +112,12 @@ function HistChart({ data, color, refLines = [], title, subtitle, isPercent = fa
 }
 
 
-function StatRow({ label, value, description, ci }) {
+function StatRow({ label, value, description, ci, ciLabel = "90% CI" }) {
   return (
     <div>
       <div style={{ fontSize: 10, color: MUTED, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 2 }}>{label}</div>
       <div style={{ fontFamily: "ui-monospace, SF Mono, Menlo, monospace", fontSize: 15, color: "var(--white)", marginBottom: 2 }}>{value}</div>
-      {ci && <CiBadge lo={ci.lo} hi={ci.hi} />}
+      {ci && <CiBadge lo={ci.lo} hi={ci.hi} label={ciLabel} />}
       {description && <div style={{ fontSize: 11, color: MUTED, opacity: 0.8, marginTop: 4 }}>{description}</div>}
     </div>
   );
@@ -357,7 +359,7 @@ export default function Results() {
             <TrendingDown size={11} /> Typical Peak-to-Trough Loss
           </div>
           <div className="metric-value" style={{ color: ROSE }}>{pct(dd?.mean)}</div>
-          <CiBadge lo={ddBci?.mean?.lo} hi={ddBci?.mean?.hi} />
+          <CiBadge lo={ddBci?.mean?.lo} hi={ddBci?.mean?.hi} label="90% CI of mean" />
           <span className="metric-badge badge-red" style={{ marginTop: 8 }}>
             Worst 5%: {pct(dd?.p5)}
           </span>
@@ -371,7 +373,7 @@ export default function Results() {
             <AlertTriangle size={11} /> Average Tail Loss (CVaR)
           </div>
           <div className="metric-value" style={{ color: GOLD }}>{pct(es?.aggregate)}</div>
-          <CiBadge lo={esBci?.aggregate?.lo} hi={esBci?.aggregate?.hi} />
+          <CiBadge lo={esBci?.aggregate?.lo} hi={esBci?.aggregate?.hi} label="90% CI of mean" />
           <span className="metric-badge badge-gold" style={{ marginTop: 8 }}>
             Worst {(es?.alpha * 100).toFixed(0)}% of days
           </span>
@@ -387,14 +389,20 @@ export default function Results() {
           <div className="metric-value">
             {rec?.mean ? `${Math.round(rec.mean)} days` : "—"}
           </div>
-          <CiBadge lo={recBci?.lo} hi={recBci?.hi} isDay={true} />
+          {rec?.pct_never != null && (
+            <div style={{ fontSize: 10, color: MUTED, marginTop: 2 }}>
+              among the {((1 - rec.pct_never) * 100).toFixed(0)}% that reclaimed their peak
+            </div>
+          )}
+          <CiBadge lo={recBci?.lo} hi={recBci?.hi} isDay={true} label="90% CI of mean" />
           <span className="metric-badge badge-gold" style={{ marginTop: 8 }}>
-            {(rec?.pct_never * 100).toFixed(1)}% still below peak at day {sim?.horizon}
+            {(rec?.pct_never * 100).toFixed(1)}% still underwater at day {sim?.horizon} (censored)
           </span>
           <div style={{ fontSize: 11, color: MUTED, marginTop: 6, lineHeight: 1.4 }}>
-            Time to reclaim the previous high, among paths that drew down.
-            Paths still underwater when the simulation ends are cut off by the
-            horizon — not predicted to be permanent losses.
+            Days to reclaim the prior high, measured only on the paths that
+            recovered within the {sim?.horizon}-day window. Paths still underwater
+            when the simulation ends are cut off by the horizon, not predicted to
+            be permanent losses.
           </div>
         </div>
 
@@ -529,11 +537,11 @@ export default function Results() {
         />
         <div className="grid-4">
           <StatRow label="Mean Max Drawdown" value={pct(dd?.mean)}
-            ci={ddBci?.mean} description="Average worst loss across all scenarios" />
+            ci={ddBci?.mean} ciLabel="90% CI of mean" description="Average worst loss across all scenarios" />
           <StatRow label="Median Max Drawdown" value={pct(dd?.median)}
             description="Half of scenarios have a worse loss than this" />
           <StatRow label="5th Percentile" value={pct(dd?.p5)}
-            ci={ddBci?.p5} description="Only 5% of scenarios produce a worse loss" />
+            ci={ddBci?.p5} ciLabel="90% CI of p5" description="Only 5% of scenarios produce a worse loss" />
           <StatRow label="90% Confidence Interval"
             value={`[${pct(dd?.ci_90_low, 1)}, ${pct(dd?.ci_90_high, 1)}]`}
             description="Range that captures 90% of all outcomes" />
@@ -566,9 +574,9 @@ export default function Results() {
         />
         <div className="grid-4">
           <StatRow label="Aggregate ES" value={pct(es?.aggregate)}
-            ci={esBci?.aggregate} description="Average return across all tail scenarios combined" />
+            ci={esBci?.aggregate} ciLabel="90% CI of mean" description="Average return across all tail scenarios combined" />
           <StatRow label="Mean Per-Scenario ES" value={pct(es?.mean)}
-            ci={esBci?.mean} description="Average of each scenario's own tail loss" />
+            ci={esBci?.mean} ciLabel="90% CI of mean" description="Average of each scenario's own tail loss" />
           <StatRow label="90% CI Lower" value={pct(es?.ci_90_low)}
             description="Lower bound of the 90% confidence range" />
           <StatRow label="90% CI Upper" value={pct(es?.ci_90_high)}
