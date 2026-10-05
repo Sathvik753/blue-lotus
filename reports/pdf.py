@@ -47,6 +47,20 @@ def _styles():
                                        fontSize=16, textColor=BL_NAVY),
     }
 
+def _pct(x, dp=2):
+    """Format a fractional value as a clean percentage string.
+
+    e.g. -0.153601 -> '-15.36%'. Returns an em dash for missing/invalid values
+    so a client-facing report never shows a raw float or 'None'.
+    """
+    try:
+        if x is None:
+            return "—"
+        return f"{float(x) * 100:.{dp}f}%"
+    except (TypeError, ValueError):
+        return "—"
+
+
 def _metric_table(rows: list) -> Table:
     """Render a 2-column metrics table."""
     style = _styles()
@@ -120,8 +134,8 @@ def generate_pdf(result: dict, strategy_name: str,
     sc = sim.get("scenario_counts", {})
     story.append(_metric_table([
         ("Observations",    meta.get("n_observations", "—"),    "Number of daily returns used"),
-        ("Raw Mean Return", f"{meta.get('raw_mean', 0):.6f}",   "Daily mean before processing"),
-        ("Raw Std Dev",     f"{meta.get('raw_std', 0):.6f}",    "Daily standard deviation"),
+        ("Raw Mean Return", _pct(meta.get('raw_mean'), 4),      "Daily mean before processing"),
+        ("Raw Std Dev",     _pct(meta.get('raw_std'), 4),       "Daily standard deviation"),
         ("Paths Simulated", f"{sim.get('n_paths', 0):,}",       "Monte Carlo paths generated"),
         ("Horizon",         f"{sim.get('horizon', 0)} days",    "Forward simulation window"),
         ("Rejection Rate",  f"{sim.get('rejection_rate', 0):.1%}", "Paths rejected by hard constraints"),
@@ -141,33 +155,36 @@ def generate_pdf(result: dict, strategy_name: str,
 
     story.append(Paragraph("3. Maximum Drawdown", style["section"]))
     dd = result.get("drawdown", {})
+    dd_mean_ci = (dd.get("bootstrap_ci") or {}).get("mean") or {}
     story.append(_metric_table([
-        ("Mean Max Drawdown",   f"{dd.get('mean', 0):.6f}",   "Average worst drawdown across all paths"),
-        ("Median Max Drawdown", f"{dd.get('median', 0):.6f}", "50th percentile drawdown"),
-        ("5th Percentile",      f"{dd.get('p5', 0):.6f}",     "Severe tail — only 5% of paths worse"),
-        ("90% CI Lower",        f"{dd.get('ci_90_low', 0):.6f}",  "Confidence interval lower bound"),
-        ("90% CI Upper",        f"{dd.get('ci_90_high', 0):.6f}", "Confidence interval upper bound"),
+        ("Mean Max Drawdown",   _pct(dd.get('mean')),   "Average worst drawdown across all paths"),
+        ("Median Max Drawdown", _pct(dd.get('median')), "50th percentile drawdown"),
+        ("5th Percentile",      _pct(dd.get('p5')),     "Severe tail — only 5% of paths worse"),
+        ("90% CI of Mean (Lower)", _pct(dd_mean_ci.get('lo')), "Lower bound of the 90% CI for the mean"),
+        ("90% CI of Mean (Upper)", _pct(dd_mean_ci.get('hi')), "Upper bound of the 90% CI for the mean"),
     ]))
 
     story.append(Paragraph("4. Expected Shortfall (CVaR)", style["section"]))
     es = result.get("expected_shortfall", {})
+    es_agg_ci = (es.get("bootstrap_ci") or {}).get("aggregate") or {}
     story.append(_metric_table([
         ("Alpha Level",      f"{es.get('alpha', 0.05):.0%}",       "Tail probability threshold"),
-        ("Aggregate ES",     f"{es.get('aggregate', 0):.6f}",       "Mean return in worst α% of scenarios"),
-        ("Mean Per-Path ES", f"{es.get('mean', 0):.6f}",            "Average per-path expected shortfall"),
-        ("90% CI Lower",     f"{es.get('ci_90_low', 0):.6f}",       "Confidence interval lower bound"),
-        ("90% CI Upper",     f"{es.get('ci_90_high', 0):.6f}",      "Confidence interval upper bound"),
+        ("Aggregate ES",     _pct(es.get('aggregate')),            "Mean return in worst α% of scenarios"),
+        ("Mean Per-Path ES", _pct(es.get('mean')),                 "Average per-path expected shortfall"),
+        ("90% CI of Mean (Lower)", _pct(es_agg_ci.get('lo')),      "Lower bound of the 90% CI for the mean"),
+        ("90% CI of Mean (Upper)", _pct(es_agg_ci.get('hi')),      "Upper bound of the 90% CI for the mean"),
     ]))
 
     story.append(Paragraph("5. Time-to-Recovery", style["section"]))
     rec = result.get("recovery", {})
+    _horizon = sim.get('horizon', 252)
     story.append(_metric_table([
-        ("Mean Recovery",   f"{rec.get('mean', '—')} days" if rec.get('mean') else "—",
-                            "Average days to recover from max drawdown"),
-        ("Median Recovery", f"{rec.get('median', '—')} days" if rec.get('median') else "—",
-                            "50th percentile recovery time"),
-        ("Never Recovered", f"{rec.get('pct_never', 0):.1%}",
-                            f"Paths that never recover within {sim.get('horizon', 252)}-day horizon"),
+        ("Mean Recovery",   f"{round(rec['mean'])} days" if rec.get('mean') else "—",
+                            "Avg days to reclaim peak — recovered paths only"),
+        ("Median Recovery", f"{round(rec['median'])} days" if rec.get('median') else "—",
+                            "Median days to reclaim peak — recovered paths only"),
+        ("Unrecovered at Horizon", f"{rec.get('pct_never', 0):.1%}",
+                            f"Still below peak when the {_horizon}-day window ends (censored, not permanent loss)"),
     ]))
 
     frag = result.get("fragility", {})
@@ -198,7 +215,7 @@ def generate_pdf(result: dict, strategy_name: str,
         style["warning"]
     ))
     story.append(Paragraph(
-        f"Blue Lotus Labs  |  {generated}  |  bluelotus.ai",
+        f"Blue Lotus Labs  |  {generated}  |  bluelotuslabs.net",
         style["small"]
     ))
 
