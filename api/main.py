@@ -29,6 +29,7 @@ from api.auth import (
     require_developer, is_developer, log_action,
 )
 from api import billing
+from api.disposable_domains import is_disposable_email
 from api.security import SecurityHeadersMiddleware, RateLimitMiddleware, IS_PRODUCTION
 from reports.pdf import generate_pdf
 from api.schemas import (
@@ -130,6 +131,14 @@ async def system_status():
 # =============================================================== Auth
 @app.post("/auth/register", response_model=TokenResponse, tags=["Auth"])
 async def register(req: RegisterRequest, request: Request, db: AsyncSession = Depends(get_db)):
+    # Block throwaway/temp-mail providers used to farm free-tier runs.
+    if is_disposable_email(req.email):
+        raise HTTPException(
+            status_code=400,
+            detail="Please sign up with a permanent email address — "
+                   "temporary or disposable email providers aren't supported.",
+        )
+
     existing = await db.execute(select(User).where(User.email == req.email))
     if existing.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="Email already registered.")
